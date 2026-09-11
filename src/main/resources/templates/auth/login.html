@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng nhập | Quản lý kho vật tư</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body class="auth-page">
+<main class="auth-card" aria-labelledby="login-title">
+    <p class="eyebrow">TTTN QL NVL</p>
+    <h1 id="login-title">Đăng nhập hệ thống</h1>
+    <p class="muted">Sử dụng tài khoản nghiệp vụ đã được cấp.</p>
+
+    <div class="alert alert-error" role="alert" th:if="${param.error}">
+        Tên đăng nhập hoặc mật khẩu không đúng.
+    </div>
+    <div class="alert alert-success" role="status" th:if="${param.logout}">
+        Bạn đã đăng xuất.
+    </div>
+    <div class="alert" role="status" th:if="${param.expired}">
+        Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.
+    </div>
+
+    <form method="post" th:action="@{/login}" class="stack">
+        <label for="username">Tên đăng nhập</label>
+        <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+
+        <label for="password">Mật khẩu</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <button type="submit">Đăng nhập</button>
+    </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,15 @@
+target/
+.idea/
+.vscode/
+.agents/
+.codex/
+AGENTS.md
+*.iml
+*.log
+.env
+tmp/
+docs/
+MIGRATION_NOTES.md
+dbml-error.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tổng quan | Quản lý kho vật tư</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <div>
+        <p class="eyebrow">Quản lý kho vật tư</p>
+        <strong th:text="${displayName}">Người dùng</strong>
+        <span class="role" th:text="${role}">ROLE</span>
+    </div>
+    <form method="post" th:action="@{/logout}">
+        <button class="button-secondary" type="submit">Đăng xuất</button>
+    </form>
+</header>
+
+<main class="page-shell">
+    <h1>Tổng quan</h1>
+    <p class="muted">Các chức năng được hiển thị theo vai trò hiện tại.</p>
+
+    <section class="shortcut-grid" aria-label="Chức năng theo vai trò">
+        <a class="shortcut" th:each="shortcut : ${shortcuts}"
+           th:href="${shortcut.path}"
+           th:text="${shortcut.label}">Chức năng</a>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: tttn-ql-nvl
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tttn_ql_nvl}
+    username: ${DB_USERNAME:tttn}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  thymeleaf:
+    cache: ${THYMELEAF_CACHE:false}
+
+server:
+  servlet:
+    session:
+      timeout: 10m
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
+
+logging:
+  level:
+    org.springframework.security: INFO
