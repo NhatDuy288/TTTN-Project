@@ -10,6 +10,7 @@ import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouse.domain.WarehouseStatus;
 import com.tttn.qlnvl.warehouse.repository.WarehouseRepository;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,12 +46,13 @@ public class WarehouseService {
 
     @Transactional
     public Warehouse create(String code, String name, String address, String note, Long actorId) {
-        String normalizedCode = requiredTrimmed(code, "warehouseCode", "Mã kho là bắt buộc.");
+        String normalizedCode = requiredTrimmed(code, "warehouseCode", "Mã kho là bắt buộc.")
+                .toUpperCase(Locale.ROOT);
         String normalizedName = requiredTrimmed(name, "warehouseName", "Tên kho là bắt buộc.");
         String normalizedAddress = requiredTrimmed(address, "address", "Địa chỉ là bắt buộc.");
         String normalizedNote = blankToNull(note);
         validateFields(normalizedCode, normalizedName, normalizedAddress, normalizedNote, null);
-        if (warehouseRepository.existsByWarehouseCode(normalizedCode)) {
+        if (warehouseRepository.existsByWarehouseCodeIgnoreCase(normalizedCode)) {
             throw new DuplicateMasterDataException("warehouseCode", "Mã kho đã tồn tại.");
         }
         if (warehouseRepository.existsByWarehouseName(normalizedName)) {
@@ -108,9 +110,10 @@ public class WarehouseService {
     }
 
     private void validateFields(String code, String name, String address, String note, WarehouseStatus status) {
-        if (code != null && (code.length() > 30 || !code.matches("[A-Za-z0-9_]+"))) {
+        if (code != null && (code.length() > 30
+                || !code.matches("KHO_[A-Z0-9]+(?:_[A-Z0-9]+)*_[0-9]{2}"))) {
             throw new InvalidMasterDataException(
-                    "warehouseCode", "Mã kho chỉ gồm chữ, số, dấu '_' và tối đa 30 ký tự.");
+                    "warehouseCode", "Mã kho phải theo mẫu KHO_<DIA_DIEM>_<NN>, viết hoa, không dấu và tối đa 30 ký tự.");
         }
         if (name.length() < 5 || name.length() > 50) {
             throw new InvalidMasterDataException("warehouseName", "Tên kho phải từ 5 đến 50 ký tự.");

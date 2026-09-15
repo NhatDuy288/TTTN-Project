@@ -6,8 +6,8 @@
 <main class="page-shell form-shell"><p class="eyebrow">UC-04</p><h1 th:text="${editMode ? 'Chỉnh sửa kho' : 'Thêm kho'}">Thêm kho</h1>
 <form class="stack form-card" method="post" th:object="${warehouseForm}" th:action="${editMode} ? @{/warehouses/{id}(id=${warehouse.id})} : @{/warehouses}">
 <div class="alert alert-error" th:if="${#fields.hasGlobalErrors()}"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}">Lỗi</p></div>
-<div th:if="${editMode}"><label>Mã kho</label><p class="readonly-value" th:text="${warehouse.warehouseCode}">KHO-01</p></div>
-<div th:unless="${editMode}"><label for="warehouseCode">Mã kho</label><input id="warehouseCode" th:field="*{warehouseCode}" maxlength="30"><p class="field-error" th:errors="*{warehouseCode}">Lỗi</p></div>
+<div th:if="${editMode}"><label>Mã kho</label><p class="readonly-value" th:text="${warehouse.warehouseCode}">KHO_HCM_01</p></div>
+<div th:unless="${editMode}"><label for="warehouseCode">Mã kho</label><input id="warehouseCode" th:field="*{warehouseCode}" maxlength="30" placeholder="KHO_HCM_01" title="Định dạng KHO_<DIA_DIEM>_<NN>"><p class="form-hint">Nhập theo mẫu KHO_&lt;DIA_DIEM&gt;_&lt;NN&gt;; hệ thống tự chuẩn hóa chữ hoa. Ví dụ: KHO_TRUNG_TAM_01.</p><p class="field-error" th:errors="*{warehouseCode}">Lỗi</p></div>
 <div><label for="warehouseName">Tên kho</label><input id="warehouseName" th:field="*{warehouseName}" minlength="5" maxlength="50"><p class="field-error" th:errors="*{warehouseName}">Lỗi</p></div>
 <div><label for="address">Địa chỉ</label><textarea id="address" th:field="*{address}" minlength="20" maxlength="200" rows="3"></textarea><p class="field-error" th:errors="*{address}">Lỗi</p></div>
 <div><label for="note">Ghi chú</label><textarea id="note" th:field="*{note}" maxlength="200" rows="3"></textarea><p class="field-error" th:errors="*{note}">Lỗi</p></div>
@@ -16,4 +16,4 @@
 <p class="form-hint">Chỉ có thể ngừng hoạt động khi kho không còn tồn và không có workflow đang xử lý.</p></div>
 <div class="form-actions"><button type="submit" th:text="${editMode ? 'Lưu thay đổi' : 'Thêm kho'}">Lưu</button>
 <a class="button-link button-secondary" th:href="${editMode} ? @{/warehouses/{id}(id=${warehouse.id})} : @{/warehouses}">Hủy</a></div>
-</form></main></body></html>
+</form></main><script th:src="@{/js/warehouse-form.js}" src="/js/warehouse-form.js"></script></body></html>

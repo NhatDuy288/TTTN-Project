@@ -1,13 +1,10 @@
 package com.tttn.qlnvl.warehouse.web;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class WarehouseCreateForm {
     @NotBlank(message = "Mã kho là bắt buộc.")
-    @Size(max = 30, message = "Mã kho tối đa 30 ký tự.")
-    @Pattern(regexp = "[A-Za-z0-9_]+", message = "Mã kho chỉ gồm chữ, số và dấu '_'.")
     private String warehouseCode;
     @NotBlank(message = "Tên kho là bắt buộc.")
     @Size(min = 5, max = 50, message = "Tên kho phải từ 5 đến 50 ký tự.")

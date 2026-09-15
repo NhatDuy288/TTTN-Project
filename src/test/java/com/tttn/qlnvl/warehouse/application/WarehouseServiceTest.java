@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.auth.domain.Role;
@@ -68,9 +69,32 @@ class WarehouseServiceTest {
     @Test
     void createValidatesLengthsAfterTrimming() {
         assertThatThrownBy(() -> service.create(
-                "KHO_01", "  abc  ", "Địa chỉ kho hợp lệ và đủ dài", null, 7L))
+                "KHO_TEST_01", "  abc  ", "Địa chỉ kho hợp lệ và đủ dài", null, 7L))
                 .isInstanceOf(InvalidMasterDataException.class)
                 .hasMessageContaining("5 đến 50");
         verify(warehouseRepository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void createNormalizesCodeAndEnforcesAcceptedConvention() {
+        AppUser actor = new AppUser("keeper", "hash", "Thủ kho", Role.WAREHOUSE_KEEPER);
+        when(appUserRepository.findById(7L)).thenReturn(Optional.of(actor));
+        when(warehouseRepository.saveAndFlush(any(Warehouse.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Warehouse created = service.create("  kho_trung_tam_01  ", "Kho trung tâm",
+                "Địa chỉ kho trung tâm hợp lệ", null, 7L);
+
+        assertThat(created.getWarehouseCode()).isEqualTo("KHO_TRUNG_TAM_01");
+        verify(warehouseRepository).existsByWarehouseCodeIgnoreCase("KHO_TRUNG_TAM_01");
+    }
+
+    @Test
+    void createRejectsCodeOutsideAcceptedConvention() {
+        assertThatThrownBy(() -> service.create("WAREHOUSE_01", "Kho trung tâm",
+                "Địa chỉ kho trung tâm hợp lệ", null, 7L))
+                .isInstanceOf(InvalidMasterDataException.class)
+                .hasMessageContaining("KHO_<DIA_DIEM>_<NN>");
+        verify(warehouseRepository, never()).saveAndFlush(any());
     }
 }

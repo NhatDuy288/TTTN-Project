@@ -36,7 +36,7 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
     @Query("select w from Warehouse w join fetch w.updatedBy where w.id = :id")
     Optional<Warehouse> findByIdForUpdate(@Param("id") Long id);
 
-    boolean existsByWarehouseCode(String warehouseCode);
+    boolean existsByWarehouseCodeIgnoreCase(String warehouseCode);
     boolean existsByWarehouseName(String warehouseName);
     boolean existsByWarehouseNameAndIdNot(String warehouseName, Long id);
 
