@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chi tiết vật tư | Quản lý kho vật tư</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head><body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell narrow-shell"><div class="page-heading"><div><p class="eyebrow">Chi tiết vật tư</p><h1 th:text="${material.materialCode}">MAT-001</h1></div>
+<a class="button-link" th:if="${canManage}" th:href="@{/materials/{id}/edit(id=${material.id})}">Chỉnh sửa</a></div>
+<div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
+<dl class="detail-grid"><div><dt>Tên vật tư</dt><dd th:text="${material.materialName}">Tên</dd></div>
+<div><dt>Nhóm vật tư</dt><dd th:text="${material.materialGroup.code + ' - ' + material.materialGroup.name}">Nhóm</dd></div>
+<div><dt>Đơn vị tính</dt><dd th:text="${material.unit.displayName}">Bộ</dd></div><div><dt>GL Code</dt><dd th:text="${material.glCode != null ? material.glCode : '-'}">-</dd></div>
+<div><dt>Trạng thái</dt><dd th:text="${material.status.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Hoạt động</dd></div>
+<div><dt>Cập nhật lúc</dt><dd th:text="${material.updatedAt}">2026-09-15</dd></div></dl>
+<a th:href="@{/materials}">Quay lại danh sách</a></main></body></html>

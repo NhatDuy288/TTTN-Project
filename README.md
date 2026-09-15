@@ -29,7 +29,19 @@ docker compose up --build
 
 Mở `http://localhost:8080/login`.
 
-Database được tạo bằng Flyway khi ứng dụng khởi động. Baseline chưa tự tạo demo user; tài khoản demo sẽ được bổ sung bằng cơ chế provisioning riêng trước giai đoạn demo.
+Database được tạo bằng Flyway khi ứng dụng khởi động.
+
+Khi profile `demo` được bật, ứng dụng tạo các tài khoản còn thiếu mà không thay thế tài khoản đã tồn tại:
+
+| Username | Vai trò |
+|---|---|
+| `requester_demo` | Người đề nghị |
+| `request_approver_demo` | Người duyệt đề nghị |
+| `inventory_staff_demo` | Nhân viên kho |
+| `inventory_approver_demo` | Người duyệt kho |
+| `warehouse_keeper_demo` | Thủ kho |
+
+Tất cả dùng mật khẩu lấy từ `DEMO_USER_PASSWORD` trong `.env`; mật khẩu thật không được commit.
 
 ## Chạy bằng Maven Wrapper
 
@@ -39,6 +51,8 @@ Khởi động PostgreSQL và cung cấp các biến môi trường nếu khác 
 DB_URL=jdbc:postgresql://localhost:5432/tttn_ql_nvl
 DB_USERNAME=tttn
 DB_PASSWORD=<mật-khẩu-local-của-bạn>
+SPRING_PROFILES_ACTIVE=demo
+DEMO_USER_PASSWORD=<mật-khẩu-demo-local-của-bạn>
 SESSION_COOKIE_SECURE=false
 ```
 

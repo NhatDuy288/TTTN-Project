@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Danh sách kho | Quản lý kho vật tư</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head><body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell"><div class="page-heading"><div><p class="eyebrow">UC-02 / UC-04</p><h1>Danh sách kho</h1></div>
+<a class="button-link" th:if="${canManage}" th:href="@{/warehouses/new}">Thêm kho</a></div>
+<form class="filter-panel" method="get" th:action="@{/warehouses}">
+<div><label for="keyword">Mã hoặc tên kho</label><input id="keyword" name="keyword" th:value="${keyword}" placeholder="Nhập từ khóa"></div>
+<div><label for="status">Trạng thái</label><select id="status" name="status"><option value="">Tất cả</option>
+<option th:each="item : ${statuses}" th:value="${item}" th:selected="${item == selectedStatus}" th:text="${item.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Trạng thái</option></select></div>
+<div><label for="size">Số dòng</label><select id="size" name="size"><option th:each="item : ${pageSizes}" th:value="${item}" th:selected="${item == selectedSize}" th:text="${item}">20</option></select></div>
+<button type="submit">Tìm kiếm</button></form>
+<div class="table-wrap"><table><thead><tr><th>Mã kho</th><th>Tên kho</th><th>Địa chỉ</th><th>Trạng thái</th><th>Người thao tác gần nhất</th><th>Thời điểm</th></tr></thead><tbody>
+<tr th:each="item : ${pageData.content}"><td><a th:href="@{/warehouses/{id}(id=${item.id})}" th:text="${item.warehouseCode}">KHO-01</a></td>
+<td th:text="${item.warehouseName}">Tên kho</td><td th:text="${item.address}">Địa chỉ</td>
+<td><span class="status-pill" th:classappend="${item.status.name() == 'ACTIVE'} ? ' status-active' : ' status-inactive'" th:text="${item.status.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Hoạt động</span></td>
+<td th:text="${item.updatedBy.fullName}">Người dùng</td><td th:text="${item.updatedAt}">2026-09-15</td></tr>
+<tr th:if="${pageData.empty}"><td colspan="6" class="empty-state">Không có kho phù hợp.</td></tr>
+</tbody></table></div>
+<nav class="pagination" th:if="${pageData.totalPages > 1}" aria-label="Phân trang">
+<a th:if="${pageData.hasPrevious()}" th:href="@{/warehouses(keyword=${keyword},status=${selectedStatus},page=${pageData.number - 1},size=${selectedSize})}">Trang trước</a>
+<span th:text="${'Trang ' + (pageData.number + 1) + ' / ' + pageData.totalPages}">Trang 1</span>
+<a th:if="${pageData.hasNext()}" th:href="@{/warehouses(keyword=${keyword},status=${selectedStatus},page=${pageData.number + 1},size=${selectedSize})}">Trang sau</a>
+</nav></main></body></html>

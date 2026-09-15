@@ -1,0 +1,3 @@
+app:
+  demo:
+    password: ${DEMO_USER_PASSWORD}

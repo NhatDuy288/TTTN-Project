@@ -22,6 +22,8 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-tttn_ql_nvl}
       DB_USERNAME: ${DB_USERNAME:-tttn}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:?Set DEMO_USER_PASSWORD in .env}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     ports:
       - "8080:8080"

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${(editMode ? 'Chỉnh sửa vật tư' : 'Thêm vật tư') + ' | Quản lý kho vật tư'}">Vật tư</title>
+<link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head><body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell form-shell"><p class="eyebrow">UC-03</p><h1 th:text="${editMode ? 'Chỉnh sửa vật tư' : 'Thêm vật tư'}">Thêm vật tư</h1>
+<form class="stack form-card" method="post" th:object="${materialForm}" th:action="${editMode} ? @{/materials/{id}(id=${material.id})} : @{/materials}">
+<div class="alert alert-error" th:if="${#fields.hasGlobalErrors()}"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}">Lỗi</p></div>
+<div th:if="${editMode}"><label>Mã vật tư</label><p class="readonly-value" th:text="${material.materialCode}">MAT-001</p></div>
+<div th:unless="${editMode}"><label for="materialCode">Mã vật tư</label><input id="materialCode" th:field="*{materialCode}" maxlength="30"><p class="field-error" th:errors="*{materialCode}">Lỗi</p></div>
+<div th:if="${editMode}"><label>Nhóm vật tư</label><p class="readonly-value" th:text="${material.materialGroup.code + ' - ' + material.materialGroup.name}">Nhóm</p></div>
+<div th:unless="${editMode}"><label for="materialGroupId">Nhóm vật tư</label><select id="materialGroupId" th:field="*{materialGroupId}"><option value="">-- Chọn nhóm --</option>
+<option th:each="group : ${groups}" th:value="${group.id}" th:text="${group.code + ' - ' + group.name}">Nhóm</option></select><p class="field-error" th:errors="*{materialGroupId}">Lỗi</p></div>
+<div><label for="materialName">Tên vật tư</label><input id="materialName" th:field="*{materialName}" maxlength="200"><p class="field-error" th:errors="*{materialName}">Lỗi</p></div>
+<div><label for="unit">Đơn vị tính</label><select id="unit" th:field="*{unit}"><option value="">-- Chọn đơn vị --</option>
+<option th:each="item : ${units}" th:value="${item}" th:text="${item.displayName}">Bộ</option></select><p class="field-error" th:errors="*{unit}">Lỗi</p></div>
+<div><label for="glCode">GL Code</label><input id="glCode" th:field="*{glCode}" maxlength="200" placeholder="Ví dụ: GL-DEMO-001"><p class="form-hint">Bắt buộc nếu nhóm vật tư yêu cầu hạch toán.</p><p class="field-error" th:errors="*{glCode}">Lỗi</p></div>
+<div th:if="${editMode}"><label for="status">Trạng thái</label><select id="status" th:field="*{status}">
+<option th:each="item : ${statuses}" th:value="${item}" th:text="${item.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Hoạt động</option></select><p class="field-error" th:errors="*{status}">Lỗi</p></div>
+<div class="form-actions"><button type="submit" th:text="${editMode ? 'Lưu thay đổi' : 'Thêm vật tư'}">Lưu</button>
+<a class="button-link button-secondary" th:href="${editMode} ? @{/materials/{id}(id=${material.id})} : @{/materials}">Hủy</a></div>
+</form></main></body></html>

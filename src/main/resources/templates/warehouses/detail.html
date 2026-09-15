@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chi tiết kho | Quản lý kho vật tư</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head><body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell narrow-shell"><div class="page-heading"><div><p class="eyebrow">Chi tiết kho</p><h1 th:text="${warehouse.warehouseCode}">KHO-01</h1></div>
+<a class="button-link" th:if="${canManage}" th:href="@{/warehouses/{id}/edit(id=${warehouse.id})}">Chỉnh sửa</a></div>
+<div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
+<dl class="detail-grid"><div><dt>Tên kho</dt><dd th:text="${warehouse.warehouseName}">Tên kho</dd></div>
+<div><dt>Địa chỉ</dt><dd th:text="${warehouse.address}">Địa chỉ</dd></div><div><dt>Ghi chú</dt><dd th:text="${warehouse.note != null ? warehouse.note : '-'}">-</dd></div>
+<div><dt>Trạng thái</dt><dd th:text="${warehouse.status.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Hoạt động</dd></div>
+<div><dt>Người thao tác gần nhất</dt><dd th:text="${warehouse.updatedBy.fullName}">Người dùng</dd></div>
+<div><dt>Thời điểm thao tác</dt><dd th:text="${warehouse.updatedAt}">2026-09-15</dd></div></dl>
+<a th:href="@{/warehouses}">Quay lại danh sách</a></main></body></html>
