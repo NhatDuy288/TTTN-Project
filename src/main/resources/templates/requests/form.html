@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${(editMode ? 'Chỉnh sửa phiếu' : 'Tạo phiếu đề nghị') + ' | Quản lý kho vật tư'}">Phiếu đề nghị</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell request-form-shell">
+    <p class="eyebrow">UC-07</p>
+    <h1 th:text="${editMode ? 'Chỉnh sửa phiếu đề nghị nháp' : 'Tạo phiếu đề nghị'}">Tạo phiếu đề nghị</h1>
+    <p class="muted" th:if="${editMode}" th:text="${'Mã phiếu: ' + request.requestCode}">Mã phiếu</p>
+    <form class="stack form-card" method="post" th:object="${warehouseRequestForm}"
+          th:action="${editMode} ? @{/requests/{id}(id=${request.id})} : @{/requests}">
+        <div class="alert alert-error" th:if="${#fields.hasGlobalErrors()}"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}">Lỗi</p></div>
+        <div class="request-header-grid">
+            <div>
+                <label for="operationTypeId">Loại phiếu</label>
+                <select id="operationTypeId" th:field="*{operationTypeId}" th:disabled="${editMode}">
+                    <option value="">-- Chọn loại phiếu --</option>
+                    <option th:each="operation : ${options.operations}" th:value="${operation.id}"
+                            th:text="${operation.code + ' - ' + operation.name}"
+                            th:attr="data-direction=${operation.direction.name()},data-requires-po=${operation.requiresPo},data-group-ids=${operation.materialGroupIds},data-conditions=${operation.conditions}">Loại phiếu</option>
+                </select>
+                <input th:if="${editMode}" type="hidden" name="operationTypeId" th:value="*{operationTypeId}">
+                <p class="form-hint">Loại phiếu không thể đổi sau lần lưu đầu tiên.</p>
+                <p class="field-error" th:errors="*{operationTypeId}">Lỗi</p>
+            </div>
+            <div>
+                <label for="reasonId">Lý do</label>
+                <select id="reasonId" th:field="*{reasonId}">
+                    <option value="">-- Chọn lý do --</option>
+                    <option th:each="reason : ${options.reasons}" th:value="${reason.id}" th:text="${reason.name}"
+                            th:attr="data-direction=${reason.direction.name()},data-requires-note=${reason.requiresNote}">Lý do</option>
+                </select>
+                <p class="field-error" th:errors="*{reasonId}">Lỗi</p>
+            </div>
+            <div id="source-warehouse-field">
+                <label for="sourceWarehouseId">Kho nguồn</label>
+                <select id="sourceWarehouseId" th:field="*{sourceWarehouseId}"><option value="">-- Chọn kho nguồn --</option><option th:each="warehouse : ${options.warehouses}" th:value="${warehouse.id}" th:text="${warehouse.warehouseCode + ' - ' + warehouse.warehouseName}">Kho</option></select>
+                <p class="field-error" th:errors="*{sourceWarehouseId}">Lỗi</p>
+            </div>
+            <div id="destination-warehouse-field">
+                <label for="destinationWarehouseId">Kho nhận</label>
+                <select id="destinationWarehouseId" th:field="*{destinationWarehouseId}"><option value="">-- Chọn kho nhận --</option><option th:each="warehouse : ${options.warehouses}" th:value="${warehouse.id}" th:text="${warehouse.warehouseCode + ' - ' + warehouse.warehouseName}">Kho</option></select>
+                <p class="field-error" th:errors="*{destinationWarehouseId}">Lỗi</p>
+            </div>
+            <div id="purchase-order-field">
+                <label for="purchaseOrderId">Purchase Order</label>
+                <select id="purchaseOrderId" th:field="*{purchaseOrderId}" th:disabled="${editMode}">
+                    <option value="">-- Không tham chiếu PO --</option>
+                    <option th:each="po : ${options.purchaseOrders}" th:value="${po.id}"
+                            th:text="${po.poCode + ' · ' + po.supplierName + ' · ' + po.status.displayName}">PO</option>
+                </select>
+                <input th:if="${editMode}" type="hidden" name="purchaseOrderId" th:value="*{purchaseOrderId}">
+                <p class="form-hint" id="po-rule-hint">PO chỉ áp dụng cho phiếu nhập.</p>
+                <p class="field-error" th:errors="*{purchaseOrderId}">Lỗi</p>
+            </div>
+            <div class="request-note-field">
+                <label for="note">Ghi chú</label>
+                <textarea id="note" th:field="*{note}" maxlength="300" rows="3"></textarea>
+                <p class="form-hint" id="note-rule-hint">Tối đa 300 ký tự.</p>
+                <p class="field-error" th:errors="*{note}">Lỗi</p>
+            </div>
+        </div>
+
+        <section>
+            <div class="section-heading"><div><h2>Chi tiết vật tư</h2><p class="form-hint">Bản nháp có thể chưa có dòng vật tư. Nhóm, vật tư và tình trạng được lọc theo loại phiếu.</p></div><button class="button-secondary" id="add-request-detail" type="button">Thêm dòng</button></div>
+            <div class="table-wrap"><table id="request-details"><thead><tr><th>Nhóm vật tư</th><th>Vật tư</th><th>Tình trạng</th><th>Số lượng</th><th>Dòng PO</th><th></th></tr></thead><tbody>
+                <tr class="request-detail-row" th:each="detail, row : *{details}">
+                    <td><select class="group-select" th:field="*{details[__${row.index}__].materialGroupId}"><option value="">-- Chọn nhóm --</option><option th:each="group : ${options.groups}" th:value="${group.id}" th:text="${group.code + ' - ' + group.name}">Nhóm</option></select></td>
+                    <td><select class="request-material-select" th:field="*{details[__${row.index}__].materialId}"><option value="">-- Chọn vật tư --</option><option th:each="material : ${options.materials}" th:value="${material.id}" th:text="${material.materialCode + ' - ' + material.materialName}" th:attr="data-group-id=${material.materialGroup.id}">Vật tư</option></select><p class="field-error" th:errors="*{details[__${row.index}__].materialId}">Lỗi</p></td>
+                    <td><select class="condition-select" th:field="*{details[__${row.index}__].condition}"><option value="">-- Chọn --</option><option th:each="condition : ${conditions}" th:value="${condition.name()}" th:text="${condition.displayName}">Tình trạng</option></select><p class="field-error" th:errors="*{details[__${row.index}__].condition}">Lỗi</p></td>
+                    <td><input type="number" min="1" step="1" th:field="*{details[__${row.index}__].quantity}"><p class="field-error" th:errors="*{details[__${row.index}__].quantity}">Lỗi</p></td>
+                    <td><select class="po-item-select" th:field="*{details[__${row.index}__].purchaseOrderItemId}"><option value="">-- Chọn dòng PO --</option><th:block th:each="po : ${options.purchaseOrders}"><option th:each="item : ${po.items}" th:value="${item.id}" th:text="${item.material.materialCode + ' · SL ' + item.orderedQuantity}" th:attr="data-po-id=${po.id},data-material-id=${item.material.id}">Dòng PO</option></th:block></select><p class="field-error" th:errors="*{details[__${row.index}__].purchaseOrderItemId}">Lỗi</p></td>
+                    <td><button class="button-danger-link remove-request-detail" type="button">Xóa dòng</button></td>
+                </tr>
+            </tbody></table></div>
+        </section>
+        <div class="form-actions"><button type="submit">Lưu nháp</button><a class="button-link button-secondary" th:href="${editMode} ? @{/requests/{id}(id=${request.id})} : @{/dashboard}">Hủy</a></div>
+    </form>
+</main>
+<script th:src="@{/js/warehouse-request-form.js}" src="/js/warehouse-request-form.js"></script>
+</body>
+</html>

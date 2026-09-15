@@ -67,6 +67,15 @@ public class WarehouseRequestService {
         return request;
     }
 
+    @Transactional(readOnly = true)
+    public WarehouseRequest getOwnedDraft(Long id, Long actorId) {
+        WarehouseRequest request = getOwned(id, actorId);
+        if (request.getStatus() != WarehouseRequestStatus.DRAFT) {
+            throw new WarehouseRequestConflictException("Chỉ được sửa phiếu đề nghị đang lưu nháp.");
+        }
+        return request;
+    }
+
     @Transactional
     public WarehouseRequest createDraft(WarehouseRequestDraftCommand command, Long actorId) {
         requireCommand(command);

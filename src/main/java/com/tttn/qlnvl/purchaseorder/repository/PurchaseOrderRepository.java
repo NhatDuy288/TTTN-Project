@@ -4,6 +4,7 @@ import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrder;
 import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {
     boolean existsByPoCodeIgnoreCase(String poCode);
+
+    @EntityGraph(attributePaths = {"items", "items.material", "items.material.materialGroup"})
+    @Query("select distinct p from PurchaseOrder p order by p.poCode")
+    List<PurchaseOrder> findAllDetailedOrderByPoCode();
 
     @Query(value = """
             select p from PurchaseOrder p join fetch p.createdBy creator

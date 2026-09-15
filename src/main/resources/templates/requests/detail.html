@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title th:text="${request.requestCode + ' | Quản lý kho vật tư'}">Chi tiết phiếu</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head>
+<body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell">
+    <div class="page-heading"><div><p class="eyebrow">UC-07</p><h1 th:text="${request.requestCode}">INP_20260915_001</h1><p class="muted">Chi tiết phiếu đề nghị kho của bạn.</p></div><a class="button-link button-secondary" th:href="@{/dashboard}">Tổng quan</a></div>
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
+    <dl class="detail-grid">
+        <div><dt>Loại phiếu</dt><dd th:text="${request.operationType.code + ' - ' + request.operationType.name}">Loại phiếu</dd></div>
+        <div><dt>Trạng thái</dt><dd><span class="status-pill" th:text="${request.status.displayName}">Lưu nháp</span></dd></div>
+        <div><dt>Kho nguồn</dt><dd th:text="${request.sourceWarehouse == null ? 'Không áp dụng' : request.sourceWarehouse.warehouseCode + ' - ' + request.sourceWarehouse.warehouseName}">Kho nguồn</dd></div>
+        <div><dt>Kho nhận</dt><dd th:text="${request.destinationWarehouse == null ? 'Không áp dụng' : request.destinationWarehouse.warehouseCode + ' - ' + request.destinationWarehouse.warehouseName}">Kho nhận</dd></div>
+        <div><dt>Purchase Order</dt><dd th:text="${request.purchaseOrder == null ? 'Không tham chiếu' : request.purchaseOrder.poCode}">PO</dd></div>
+        <div><dt>Lý do</dt><dd th:text="${request.reason.name}">Lý do</dd></div>
+        <div><dt>Người tạo</dt><dd th:text="${request.createdBy.username + ' - ' + request.createdBy.fullName}">User</dd></div>
+        <div><dt>Cập nhật lần cuối</dt><dd th:text="${@businessDisplay.dateTime(request.updatedAt)}">Thời gian</dd></div>
+        <div class="detail-grid-wide"><dt>Ghi chú</dt><dd th:text="${request.note == null ? 'Không có' : request.note}">Ghi chú</dd></div>
+    </dl>
+    <div class="table-wrap"><table><thead><tr><th>Vật tư</th><th>ĐVT</th><th>Tình trạng</th><th>Số lượng</th><th>Dòng PO</th></tr></thead><tbody>
+        <tr th:each="detail : ${request.details}"><td th:text="${detail.material.materialCode + ' - ' + detail.material.materialName}">Vật tư</td><td th:text="${detail.material.unit.displayName}">ĐVT</td><td th:text="${detail.condition.displayName}">Tình trạng</td><td th:text="${detail.quantity}">1</td><td th:text="${detail.purchaseOrderItem == null ? '-' : request.purchaseOrder.poCode + ' · ' + detail.purchaseOrderItem.material.materialCode}">PO</td></tr>
+        <tr th:if="${request.details.empty}"><td class="empty-state" colspan="5">Phiếu nháp chưa có vật tư.</td></tr>
+    </tbody></table></div>
+    <div class="form-actions" th:if="${request.status.name() == 'DRAFT'}"><a class="button-link" th:href="@{/requests/{id}/edit(id=${request.id})}">Chỉnh sửa</a></div>
+</main>
+</body>
+</html>

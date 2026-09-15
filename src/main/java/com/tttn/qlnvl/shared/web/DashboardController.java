@@ -42,7 +42,7 @@ public class DashboardController {
 
         switch (role) {
             case "REQUESTER" -> {
-                shortcuts.add(new DashboardShortcut("Đề nghị kho", "/requests"));
+                shortcuts.add(new DashboardShortcut("Tạo đề nghị kho", "/requests/new"));
                 shortcuts.add(new DashboardShortcut("Đơn mua hàng", "/purchase-orders"));
             }
             case "REQUEST_APPROVER" -> {
