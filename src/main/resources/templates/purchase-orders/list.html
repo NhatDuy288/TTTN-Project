@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đơn hàng | Quản lý kho vật tư</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head><body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell"><div class="page-heading"><div><p class="eyebrow">UC-05</p><h1>Quản lý đơn hàng</h1><p class="muted">Tra cứu Purchase Order theo ngày tạo và thông tin nghiệp vụ.</p></div>
+<a class="button-link" th:if="${canManage}" th:href="@{/purchase-orders/new}">Tạo đơn hàng</a></div>
+<div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
+<div class="alert alert-error" th:if="${searchError}" th:text="${searchError}">Lỗi tìm kiếm</div>
+<form class="filter-panel po-filter-panel" method="get" th:action="@{/purchase-orders}">
+<div><label for="createdFrom">Từ ngày</label><input id="createdFrom" type="date" name="createdFrom" th:value="${search.createdFrom}" required></div>
+<div><label for="createdTo">Đến ngày</label><input id="createdTo" type="date" name="createdTo" th:value="${search.createdTo}" required></div>
+<div><label for="status">Trạng thái</label><select id="status" name="status"><option value="">Tất cả</option><option th:each="item : ${statuses}" th:value="${item}" th:text="${item.displayName}" th:selected="${item == search.status}">Trạng thái</option></select></div>
+<div><label for="poCode">Mã PO</label><input id="poCode" name="poCode" th:value="${search.poCode}" maxlength="50"></div>
+<div><label for="createdBy">User tạo</label><input id="createdBy" name="createdBy" th:value="${search.createdBy}"></div>
+<div><label for="supplierName">Nhà cung cấp</label><input id="supplierName" name="supplierName" th:value="${search.supplierName}" maxlength="300"></div>
+<div><label for="materialGroupId">Nhóm vật tư</label><select id="materialGroupId" name="materialGroupId"><option value="">Tất cả</option><option th:each="group : ${groups}" th:value="${group.id}" th:text="${group.code + ' - ' + group.name}" th:selected="${group.id == search.materialGroupId}">Nhóm</option></select></div>
+<div><label for="materialId">Vật tư</label><select id="materialId" name="materialId"><option value="">Tất cả</option><option th:each="material : ${materials}" th:value="${material.id}" th:text="${material.materialCode + ' - ' + material.materialName}" th:selected="${material.id == search.materialId}">Vật tư</option></select></div>
+<div><label for="size">Số dòng</label><select id="size" name="size"><option th:each="item : ${pageSizes}" th:value="${item}" th:text="${item}" th:selected="${item == selectedSize}">20</option></select></div>
+<button type="submit">Tìm kiếm</button></form>
+<div class="table-wrap"><table><thead><tr><th>STT</th><th>Mã PO</th><th>Nhà cung cấp</th><th>Ngày đặt hàng</th><th>Ngày tạo</th><th>User tạo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+<tbody><tr th:each="order, row : ${pageData.content}"><td th:text="${pageData.number * pageData.size + row.count}">1</td><td th:text="${order.poCode}">PO-001</td><td th:text="${order.supplierName}">NCC</td>
+<td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy')}">01/01/2026</td><td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}">01/01/2026</td>
+<td th:text="${order.createdBy.username}">user</td><td><span class="status-pill" th:text="${order.status.displayName}">Nháp</span></td><td><a th:href="@{/purchase-orders/{id}(id=${order.id})}">Xem</a></td></tr>
+<tr th:if="${pageData.empty}"><td class="empty-state" colspan="8">Không có đơn hàng phù hợp.</td></tr></tbody></table></div>
+<nav class="pagination" th:if="${pageData.totalPages > 1}">
+<a th:if="${pageData.hasPrevious()}" th:href="@{/purchase-orders(createdFrom=${search.createdFrom},createdTo=${search.createdTo},status=${search.status},poCode=${search.poCode},createdBy=${search.createdBy},materialGroupId=${search.materialGroupId},materialId=${search.materialId},supplierName=${search.supplierName},size=${selectedSize},page=${pageData.number - 1})}">Trang trước</a>
+<span th:text="${'Trang ' + (pageData.number + 1) + '/' + pageData.totalPages}">Trang 1/1</span>
+<a th:if="${pageData.hasNext()}" th:href="@{/purchase-orders(createdFrom=${search.createdFrom},createdTo=${search.createdTo},status=${search.status},poCode=${search.poCode},createdBy=${search.createdBy},materialGroupId=${search.materialGroupId},materialId=${search.materialId},supplierName=${search.supplierName},size=${selectedSize},page=${pageData.number + 1})}">Trang sau</a></nav>
+</main></body></html>

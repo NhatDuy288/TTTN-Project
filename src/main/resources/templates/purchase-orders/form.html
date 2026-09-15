@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${(editMode ? 'Chỉnh sửa PO' : 'Tạo PO') + ' | Quản lý kho vật tư'}">Purchase Order</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head><body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell po-form-shell"><p class="eyebrow">UC-06</p><h1 th:text="${editMode ? 'Chỉnh sửa đơn hàng nháp' : 'Tạo đơn hàng'}">Tạo đơn hàng</h1>
+<div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}">Lỗi</div>
+<form class="stack form-card" method="post" th:object="${purchaseOrderForm}" th:action="${editMode} ? @{/purchase-orders/{id}(id=${order.id})} : @{/purchase-orders}">
+<div class="alert alert-error" th:if="${#fields.hasGlobalErrors()}"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}">Lỗi</p></div>
+<div class="po-header-grid">
+<div th:if="${editMode}"><label>Mã PO</label><p class="readonly-value" th:text="${order.poCode}">PO-001</p><input type="hidden" th:field="*{poCode}"></div>
+<div th:unless="${editMode}"><label for="poCode">Mã PO</label><input id="poCode" th:field="*{poCode}" maxlength="50"><p class="field-error" th:errors="*{poCode}">Lỗi</p></div>
+<div><label for="supplierName">Nhà cung cấp</label><input id="supplierName" th:field="*{supplierName}" maxlength="300"><p class="field-error" th:errors="*{supplierName}">Lỗi</p></div>
+<div><label for="orderDate">Ngày đặt hàng</label><input id="orderDate" type="date" th:field="*{orderDate}"><p class="field-error" th:errors="*{orderDate}">Lỗi</p></div></div>
+<section><div class="section-heading"><div><h2>Vật tư hàng hóa</h2><p class="form-hint">Bản nháp có thể chưa có vật tư; cần ít nhất một dòng hợp lệ trước khi hoàn tất.</p></div><button class="button-secondary" id="add-item" type="button">Thêm dòng</button></div>
+<div class="table-wrap"><table id="po-items"><thead><tr><th>Vật tư</th><th>Số lượng</th><th>Đơn giá</th><th></th></tr></thead><tbody>
+<tr class="po-item-row" th:each="item, row : *{items}">
+<td><select th:field="*{items[__${row.index}__].materialId}"><option value="">-- Chọn vật tư --</option><option th:each="material : ${materials}" th:value="${material.id}" th:text="${material.materialCode + ' - ' + material.materialName + ' (' + material.materialGroup.code + ')'}">Vật tư</option></select><p class="field-error" th:errors="*{items[__${row.index}__].materialId}">Lỗi</p></td>
+<td><input type="number" min="1" step="1" th:field="*{items[__${row.index}__].orderedQuantity}"><p class="field-error" th:errors="*{items[__${row.index}__].orderedQuantity}">Lỗi</p></td>
+<td><input type="number" min="0.0001" step="0.0001" th:field="*{items[__${row.index}__].unitPrice}"><p class="field-error" th:errors="*{items[__${row.index}__].unitPrice}">Lỗi</p></td>
+<td><button class="button-danger-link remove-item" type="button">Xóa dòng</button></td></tr>
+</tbody></table></div></section>
+<div class="form-actions"><button type="submit">Lưu nháp</button><a class="button-link button-secondary" th:href="${editMode} ? @{/purchase-orders/{id}(id=${order.id})} : @{/purchase-orders}">Hủy</a></div>
+</form></main><script th:src="@{/js/purchase-order-form.js}" src="/js/purchase-order-form.js"></script></body></html>

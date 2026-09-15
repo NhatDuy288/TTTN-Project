@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${detail.order.poCode + ' | Quản lý kho vật tư'}">Chi tiết PO</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head><body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell"><div class="page-heading"><div><p class="eyebrow">UC-05 / UC-06</p><h1 th:text="${detail.order.poCode}">PO-001</h1><p class="muted">Chi tiết đơn hàng và số lượng được tính từ workflow hiện tại.</p></div><a class="button-link button-secondary" th:href="@{/purchase-orders}">Danh sách</a></div>
+<div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div><div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}">Lỗi</div>
+<dl class="detail-grid"><div><dt>Nhà cung cấp</dt><dd th:text="${detail.order.supplierName}">NCC</dd></div><div><dt>Ngày đặt hàng</dt><dd th:text="${#temporals.format(detail.order.orderDate, 'dd/MM/yyyy')}">01/01/2026</dd></div>
+<div><dt>Ngày PO</dt><dd th:text="${detail.order.firstReceivedAt == null ? 'Chưa nhập kho' : #temporals.format(detail.order.firstReceivedAt, 'dd/MM/yyyy HH:mm')}">Chưa nhập</dd></div><div><dt>Trạng thái</dt><dd><span class="status-pill" th:text="${detail.order.status.displayName}">Nháp</span></dd></div>
+<div><dt>User tạo</dt><dd th:text="${detail.order.createdBy.username + ' - ' + detail.order.createdBy.fullName}">user</dd></div><div><dt>Cập nhật lần cuối</dt><dd th:text="${#temporals.format(detail.order.updatedAt, 'dd/MM/yyyy HH:mm')}">01/01/2026</dd></div></dl>
+<div class="table-wrap"><table><thead><tr><th>Vật tư</th><th>ĐVT</th><th>Đặt hàng</th><th>Đã cam kết</th><th>Còn được đề nghị</th><th>Đã nhận</th><th>Còn phải nhận</th><th>Đơn giá</th></tr></thead><tbody>
+<tr th:each="line : ${detail.items}"><td th:text="${line.orderItem.material.materialCode + ' - ' + line.orderItem.material.materialName}">Vật tư</td><td th:text="${line.orderItem.material.unit.displayName}">Cái</td>
+<td th:text="${line.orderItem.orderedQuantity}">10</td><td th:text="${line.committedQuantity}">0</td><td th:text="${line.remainingToRequest}">10</td><td th:text="${line.receivedQuantity}">0</td><td th:text="${line.remainingToReceive}">10</td><td th:text="${line.orderItem.unitPrice == null ? '-' : line.orderItem.unitPrice}">-</td></tr>
+<tr th:if="${detail.items.empty}"><td class="empty-state" colspan="8">Đơn hàng nháp chưa có vật tư.</td></tr></tbody></table></div>
+<div class="form-actions" th:if="${canManage}">
+<a class="button-link" th:if="${detail.order.status.name() == 'DRAFT'}" th:href="@{/purchase-orders/{id}/edit(id=${detail.order.id})}">Chỉnh sửa</a>
+<form th:if="${detail.order.status.name() == 'DRAFT'}" method="post" th:action="@{/purchase-orders/{id}/finalize(id=${detail.order.id})}" onsubmit="return confirm('Hoàn tất khai báo và mở đơn hàng?')"><button type="submit">Hoàn tất</button></form>
+<form th:if="${detail.order.status.name() == 'DRAFT' or detail.order.status.name() == 'OPEN'}" method="post" th:action="@{/purchase-orders/{id}/cancel(id=${detail.order.id})}" onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng?')"><button class="button-danger" type="submit">Hủy đơn hàng</button></form></div>
+</main></body></html>

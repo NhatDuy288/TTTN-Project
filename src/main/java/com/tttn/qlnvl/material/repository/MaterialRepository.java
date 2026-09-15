@@ -4,6 +4,7 @@ import com.tttn.qlnvl.material.domain.Material;
 import com.tttn.qlnvl.material.domain.MaterialStatus;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -13,6 +14,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface MaterialRepository extends JpaRepository<Material, Long> {
+    @EntityGraph(attributePaths = "materialGroup")
+    List<Material> findByStatusOrderByMaterialCodeAsc(MaterialStatus status);
+
+    @EntityGraph(attributePaths = "materialGroup")
+    @Query("select m from Material m where m.id in :ids")
+    List<Material> findDetailedByIdIn(@Param("ids") List<Long> ids);
+
     @EntityGraph(attributePaths = "materialGroup")
     @Query("""
             select m from Material m
