@@ -26,3 +26,6 @@ server:
 logging:
   level:
     org.springframework.security: INFO
+
+app:
+  business-zone: ${BUSINESS_TIME_ZONE:Asia/Ho_Chi_Minh}

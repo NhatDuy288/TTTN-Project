@@ -9,5 +9,5 @@
 <div><dt>Nhóm vật tư</dt><dd th:text="${material.materialGroup.code + ' - ' + material.materialGroup.name}">Nhóm</dd></div>
 <div><dt>Đơn vị tính</dt><dd th:text="${material.unit.displayName}">Bộ</dd></div><div><dt>GL Code</dt><dd th:text="${material.glCode != null ? material.glCode : '-'}">-</dd></div>
 <div><dt>Trạng thái</dt><dd th:text="${material.status.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Hoạt động</dd></div>
-<div><dt>Cập nhật lúc</dt><dd th:text="${material.updatedAt}">2026-09-15</dd></div></dl>
+<div><dt>Cập nhật lúc</dt><dd th:text="${@businessDisplay.dateTime(material.updatedAt)}">15/09/2026 14:15</dd></div></dl>
 <a th:href="@{/materials}">Quay lại danh sách</a></main></body></html>

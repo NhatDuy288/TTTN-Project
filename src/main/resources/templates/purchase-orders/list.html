@@ -19,7 +19,7 @@
 <button type="submit">Tìm kiếm</button></form>
 <div class="table-wrap"><table><thead><tr><th>STT</th><th>Mã PO</th><th>Nhà cung cấp</th><th>Ngày đặt hàng</th><th>Ngày tạo</th><th>User tạo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
 <tbody><tr th:each="order, row : ${pageData.content}"><td th:text="${pageData.number * pageData.size + row.count}">1</td><td th:text="${order.poCode}">PO-001</td><td th:text="${order.supplierName}">NCC</td>
-<td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy')}">01/01/2026</td><td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}">01/01/2026</td>
+<td th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy')}">01/01/2026</td><td th:text="${@businessDisplay.date(order.createdAt)}">01/01/2026</td>
 <td th:text="${order.createdBy.username}">user</td><td><span class="status-pill" th:text="${order.status.displayName}">Nháp</span></td><td><a th:href="@{/purchase-orders/{id}(id=${order.id})}">Xem</a></td></tr>
 <tr th:if="${pageData.empty}"><td class="empty-state" colspan="8">Không có đơn hàng phù hợp.</td></tr></tbody></table></div>
 <nav class="pagination" th:if="${pageData.totalPages > 1}">

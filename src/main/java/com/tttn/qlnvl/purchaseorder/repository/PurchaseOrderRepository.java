@@ -14,7 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {
-    boolean existsByPoCode(String poCode);
+    boolean existsByPoCodeIgnoreCase(String poCode);
 
     @Query(value = """
             select p from PurchaseOrder p join fetch p.createdBy creator

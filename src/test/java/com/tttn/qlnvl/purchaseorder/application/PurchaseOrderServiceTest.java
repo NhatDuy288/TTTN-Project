@@ -51,11 +51,12 @@ class PurchaseOrderServiceTest {
         when(orderRepository.saveAndFlush(any(PurchaseOrder.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        PurchaseOrder order = service.createDraft(command("PO-001", List.of()), 7L);
+        PurchaseOrder order = service.createDraft(command(" po-2026-0001 ", List.of()), 7L);
 
         assertThat(order.getStatus()).isEqualTo(PurchaseOrderStatus.DRAFT);
         assertThat(order.getItems()).isEmpty();
-        assertThat(order.getPoCode()).isEqualTo("PO-001");
+        assertThat(order.getPoCode()).isEqualTo("PO-2026-0001");
+        verify(orderRepository).existsByPoCodeIgnoreCase("PO-2026-0001");
     }
 
     @Test
@@ -63,7 +64,7 @@ class PurchaseOrderServiceTest {
         Material material = material(3L, 9L, true);
         when(materialRepository.findDetailedByIdIn(List.of(3L))).thenReturn(List.of(material));
 
-        assertThatThrownBy(() -> service.createDraft(command("PO-002", List.of(
+        assertThatThrownBy(() -> service.createDraft(command("PO-2026-0002", List.of(
                 new PurchaseOrderDraftCommand.Item(3L, 10L, null))), 7L))
                 .isInstanceOf(InvalidPurchaseOrderException.class)
                 .hasMessageContaining("Đơn giá");
@@ -76,11 +77,18 @@ class PurchaseOrderServiceTest {
         Material second = material(4L, 10L, false);
         when(materialRepository.findDetailedByIdIn(List.of(3L, 4L))).thenReturn(List.of(first, second));
 
-        assertThatThrownBy(() -> service.createDraft(command("PO-003", List.of(
+        assertThatThrownBy(() -> service.createDraft(command("PO-2026-0003", List.of(
                 new PurchaseOrderDraftCommand.Item(3L, 10L, null),
                 new PurchaseOrderDraftCommand.Item(4L, 5L, null))), 7L))
                 .isInstanceOf(InvalidPurchaseOrderException.class)
                 .hasMessageContaining("cùng một nhóm");
+    }
+
+    @Test
+    void createDraftRejectsCodeOutsideAcceptedConvention() {
+        assertThatThrownBy(() -> service.createDraft(command("PO-2026-001", List.of()), 7L))
+                .isInstanceOf(InvalidPurchaseOrderException.class)
+                .hasMessageContaining("PO-YYYY-NNNN");
     }
 
     @Test

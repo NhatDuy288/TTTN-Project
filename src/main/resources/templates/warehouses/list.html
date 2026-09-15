@@ -14,7 +14,7 @@
 <tr th:each="item : ${pageData.content}"><td><a th:href="@{/warehouses/{id}(id=${item.id})}" th:text="${item.warehouseCode}">KHO-01</a></td>
 <td th:text="${item.warehouseName}">Tên kho</td><td th:text="${item.address}">Địa chỉ</td>
 <td><span class="status-pill" th:classappend="${item.status.name() == 'ACTIVE'} ? ' status-active' : ' status-inactive'" th:text="${item.status.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Hoạt động</span></td>
-<td th:text="${item.updatedBy.fullName}">Người dùng</td><td th:text="${item.updatedAt}">2026-09-15</td></tr>
+<td th:text="${item.updatedBy.fullName}">Người dùng</td><td th:text="${@businessDisplay.dateTime(item.updatedAt)}">15/09/2026 14:15</td></tr>
 <tr th:if="${pageData.empty}"><td colspan="6" class="empty-state">Không có kho phù hợp.</td></tr>
 </tbody></table></div>
 <nav class="pagination" th:if="${pageData.totalPages > 1}" aria-label="Phân trang">

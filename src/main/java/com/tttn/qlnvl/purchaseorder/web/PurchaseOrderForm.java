@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PurchaseOrderForm {
+    private Long materialGroupId;
     @NotBlank(message = "Mã PO là bắt buộc.")
     @Size(max = 50, message = "Mã PO tối đa 50 ký tự.")
     private String poCode;
@@ -29,6 +30,9 @@ public class PurchaseOrderForm {
         form.poCode = order.getPoCode();
         form.supplierName = order.getSupplierName();
         form.orderDate = order.getOrderDate();
+        form.materialGroupId = order.getItems().isEmpty()
+                ? null
+                : order.getItems().getFirst().getMaterial().getMaterialGroup().getId();
         form.items = order.getItems().stream().map(PurchaseOrderItemForm::from)
                 .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         if (form.items.isEmpty()) {
@@ -51,6 +55,8 @@ public class PurchaseOrderForm {
     public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
     public LocalDate getOrderDate() { return orderDate; }
     public void setOrderDate(LocalDate orderDate) { this.orderDate = orderDate; }
+    public Long getMaterialGroupId() { return materialGroupId; }
+    public void setMaterialGroupId(Long materialGroupId) { this.materialGroupId = materialGroupId; }
     public List<PurchaseOrderItemForm> getItems() { return items; }
     public void setItems(List<PurchaseOrderItemForm> items) { this.items = items; }
 }

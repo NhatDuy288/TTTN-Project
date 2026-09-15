@@ -21,8 +21,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PurchaseOrderService {
     private static final List<Integer> ALLOWED_PAGE_SIZES = List.of(20, 50, 100);
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final Pattern PO_CODE_PATTERN = Pattern.compile("^PO-[0-9]{4}-[0-9]{4}$");
 
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final PurchaseOrderItemRepository itemRepository;
@@ -112,14 +115,20 @@ public class PurchaseOrderService {
         return materialGroupRepository.findAllByOrderByCodeAsc();
     }
 
+    @Transactional(readOnly = true)
+    public List<MaterialGroup> activeGroups() {
+        return materialGroupRepository.findByActiveTrueOrderByCodeAsc();
+    }
+
     @Transactional
     public PurchaseOrder createDraft(PurchaseOrderDraftCommand command, Long actorId) {
         if (command == null) {
             throw new InvalidPurchaseOrderException(null, "Dữ liệu đơn hàng là bắt buộc.");
         }
-        String poCode = required(command.poCode(), "poCode", "Mã PO là bắt buộc.");
+        String poCode = required(command.poCode(), "poCode", "Mã PO là bắt buộc.")
+                .toUpperCase(Locale.ROOT);
         validateCode(poCode);
-        if (purchaseOrderRepository.existsByPoCode(poCode)) {
+        if (purchaseOrderRepository.existsByPoCodeIgnoreCase(poCode)) {
             throw new InvalidPurchaseOrderException("poCode", "Mã PO đã tồn tại.");
         }
         Header header = validateHeader(command);
@@ -305,8 +314,9 @@ public class PurchaseOrderService {
     }
 
     private void validateCode(String code) {
-        if (code.length() > 50) {
-            throw new InvalidPurchaseOrderException("poCode", "Mã PO tối đa 50 ký tự.");
+        if (!PO_CODE_PATTERN.matcher(code).matches()) {
+            throw new InvalidPurchaseOrderException(
+                    "poCode", "Mã PO phải theo định dạng PO-YYYY-NNNN, ví dụ PO-2026-0001.");
         }
     }
 

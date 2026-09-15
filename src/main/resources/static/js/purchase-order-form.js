@@ -1,7 +1,51 @@
 (function () {
+    const poCodeInput = document.querySelector("#poCode");
+    if (poCodeInput) {
+        poCodeInput.addEventListener("input", function () {
+            poCodeInput.value = poCodeInput.value.toUpperCase().replace(/^\s+/, "");
+        });
+        poCodeInput.addEventListener("blur", function () {
+            poCodeInput.value = poCodeInput.value.trim();
+        });
+    }
+
     const body = document.querySelector("#po-items tbody");
     const addButton = document.querySelector("#add-item");
-    if (!body || !addButton) return;
+    const groupSelect = document.querySelector("#materialGroupId");
+    const priceHint = document.querySelector("#price-rule-hint");
+    if (!body || !addButton || !groupSelect) return;
+
+    function refreshMaterialOptions(clearRows) {
+        const groupId = groupSelect.value;
+        body.querySelectorAll(".po-item-row").forEach(function (row) {
+            const materialSelect = row.querySelector(".material-select");
+            if (clearRows) {
+                row.querySelectorAll("input, select.material-select").forEach(function (field) {
+                    field.value = "";
+                });
+            }
+            materialSelect.querySelectorAll("option[data-group-id]").forEach(function (option) {
+                const belongsToGroup = option.dataset.groupId === groupId;
+                option.hidden = !belongsToGroup;
+                option.disabled = !belongsToGroup;
+            });
+            if (materialSelect.selectedOptions.length
+                    && materialSelect.selectedOptions[0].dataset.groupId
+                    && materialSelect.selectedOptions[0].dataset.groupId !== groupId) {
+                materialSelect.value = "";
+            }
+            materialSelect.disabled = !groupId;
+        });
+
+        const selectedGroup = groupSelect.selectedOptions[0];
+        if (!groupId) {
+            priceHint.textContent = "Chọn nhóm để lọc danh sách vật tư.";
+        } else if (selectedGroup.dataset.requiresAccounting === "true") {
+            priceHint.textContent = "Nhóm này yêu cầu hạch toán: đơn giá bắt buộc và phải lớn hơn 0.";
+        } else {
+            priceHint.textContent = "Nhóm này không yêu cầu hạch toán: đơn giá có thể để trống.";
+        }
+    }
 
     function reindex() {
         body.querySelectorAll(".po-item-row").forEach(function (row, index) {
@@ -24,6 +68,7 @@
         });
         body.appendChild(row);
         reindex();
+        refreshMaterialOptions(false);
     });
 
     body.addEventListener("click", function (event) {
@@ -38,4 +83,10 @@
             reindex();
         }
     });
+
+    groupSelect.addEventListener("change", function () {
+        refreshMaterialOptions(true);
+    });
+
+    refreshMaterialOptions(false);
 }());

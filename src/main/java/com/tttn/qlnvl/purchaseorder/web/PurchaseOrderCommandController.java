@@ -113,6 +113,7 @@ public class PurchaseOrderCommandController {
 
     private void prepareForm(Model model, boolean editMode, PurchaseOrder order) {
         model.addAttribute("materials", purchaseOrderService.activeMaterials());
+        model.addAttribute("groups", purchaseOrderService.activeGroups());
         model.addAttribute("editMode", editMode);
         model.addAttribute("order", order);
     }

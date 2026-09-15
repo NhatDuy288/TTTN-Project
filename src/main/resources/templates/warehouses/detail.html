@@ -9,5 +9,5 @@
 <div><dt>Địa chỉ</dt><dd th:text="${warehouse.address}">Địa chỉ</dd></div><div><dt>Ghi chú</dt><dd th:text="${warehouse.note != null ? warehouse.note : '-'}">-</dd></div>
 <div><dt>Trạng thái</dt><dd th:text="${warehouse.status.name() == 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}">Hoạt động</dd></div>
 <div><dt>Người thao tác gần nhất</dt><dd th:text="${warehouse.updatedBy.fullName}">Người dùng</dd></div>
-<div><dt>Thời điểm thao tác</dt><dd th:text="${warehouse.updatedAt}">2026-09-15</dd></div></dl>
+<div><dt>Thời điểm thao tác</dt><dd th:text="${@businessDisplay.dateTime(warehouse.updatedAt)}">15/09/2026 14:15</dd></div></dl>
 <a th:href="@{/warehouses}">Quay lại danh sách</a></main></body></html>

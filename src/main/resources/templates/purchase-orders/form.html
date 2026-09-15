@@ -8,13 +8,16 @@
 <div class="alert alert-error" th:if="${#fields.hasGlobalErrors()}"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}">Lỗi</p></div>
 <div class="po-header-grid">
 <div th:if="${editMode}"><label>Mã PO</label><p class="readonly-value" th:text="${order.poCode}">PO-001</p><input type="hidden" th:field="*{poCode}"></div>
-<div th:unless="${editMode}"><label for="poCode">Mã PO</label><input id="poCode" th:field="*{poCode}" maxlength="50"><p class="field-error" th:errors="*{poCode}">Lỗi</p></div>
+<div th:unless="${editMode}"><label for="poCode">Mã PO</label><input id="poCode" th:field="*{poCode}" maxlength="12" placeholder="PO-2026-0001" title="Định dạng PO-YYYY-NNNN"><p class="muted">Nhập theo mẫu PO-YYYY-NNNN; hệ thống tự chuẩn hóa chữ hoa.</p><p class="field-error" th:errors="*{poCode}">Lỗi</p></div>
 <div><label for="supplierName">Nhà cung cấp</label><input id="supplierName" th:field="*{supplierName}" maxlength="300"><p class="field-error" th:errors="*{supplierName}">Lỗi</p></div>
 <div><label for="orderDate">Ngày đặt hàng</label><input id="orderDate" type="date" th:field="*{orderDate}"><p class="field-error" th:errors="*{orderDate}">Lỗi</p></div></div>
 <section><div class="section-heading"><div><h2>Vật tư hàng hóa</h2><p class="form-hint">Bản nháp có thể chưa có vật tư; cần ít nhất một dòng hợp lệ trước khi hoàn tất.</p></div><button class="button-secondary" id="add-item" type="button">Thêm dòng</button></div>
+<div class="po-group-filter"><label for="materialGroupId">Nhóm vật tư</label><select id="materialGroupId" th:field="*{materialGroupId}">
+<option value="">-- Chọn nhóm vật tư --</option><option th:each="group : ${groups}" th:value="${group.id}" th:text="${group.code + ' - ' + group.name}" th:attr="data-requires-accounting=${group.requiresAccounting}">Nhóm</option></select>
+<p class="form-hint" id="price-rule-hint">Chọn nhóm để lọc danh sách vật tư.</p></div>
 <div class="table-wrap"><table id="po-items"><thead><tr><th>Vật tư</th><th>Số lượng</th><th>Đơn giá</th><th></th></tr></thead><tbody>
 <tr class="po-item-row" th:each="item, row : *{items}">
-<td><select th:field="*{items[__${row.index}__].materialId}"><option value="">-- Chọn vật tư --</option><option th:each="material : ${materials}" th:value="${material.id}" th:text="${material.materialCode + ' - ' + material.materialName + ' (' + material.materialGroup.code + ')'}">Vật tư</option></select><p class="field-error" th:errors="*{items[__${row.index}__].materialId}">Lỗi</p></td>
+<td><select class="material-select" th:field="*{items[__${row.index}__].materialId}"><option value="">-- Chọn vật tư --</option><option th:each="material : ${materials}" th:value="${material.id}" th:text="${material.materialCode + ' - ' + material.materialName}" th:attr="data-group-id=${material.materialGroup.id}">Vật tư</option></select><p class="field-error" th:errors="*{items[__${row.index}__].materialId}">Lỗi</p></td>
 <td><input type="number" min="1" step="1" th:field="*{items[__${row.index}__].orderedQuantity}"><p class="field-error" th:errors="*{items[__${row.index}__].orderedQuantity}">Lỗi</p></td>
 <td><input type="number" min="0.0001" step="0.0001" th:field="*{items[__${row.index}__].unitPrice}"><p class="field-error" th:errors="*{items[__${row.index}__].unitPrice}">Lỗi</p></td>
 <td><button class="button-danger-link remove-item" type="button">Xóa dòng</button></td></tr>
