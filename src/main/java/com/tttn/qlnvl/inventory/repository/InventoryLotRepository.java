@@ -21,4 +21,17 @@ public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long
     List<InventoryLot> findDimensionForUpdate(@Param("warehouseId") Long warehouseId,
             @Param("materialId") Long materialId,
             @Param("condition") MaterialCondition condition);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select lot from InventoryLot lot
+            where lot.warehouse.id = :warehouseId
+              and lot.material.id = :materialId
+              and lot.condition = :condition
+              and lot.onHandQuantity > lot.reservedQuantity
+            order by lot.receivedAt, lot.id
+            """)
+    List<InventoryLot> findAvailableFifoForUpdate(@Param("warehouseId") Long warehouseId,
+            @Param("materialId") Long materialId,
+            @Param("condition") MaterialCondition condition);
 }

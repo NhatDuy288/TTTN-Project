@@ -64,6 +64,11 @@ public class StockReservation {
         this.releasedAt = Instant.now();
     }
 
+    public void convert() {
+        this.status = StockReservationStatus.CONVERTED;
+        this.releasedAt = Instant.now();
+    }
+
     public Long getId() { return id; }
     public WarehouseRequestDetail getRequestDetail() { return requestDetail; }
     public Warehouse getWarehouse() { return warehouse; }

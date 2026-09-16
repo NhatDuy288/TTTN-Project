@@ -26,6 +26,11 @@ public interface WarehouseRequestRepository extends JpaRepository<WarehouseReque
             @Param("status") WarehouseRequestStatus status,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {"createdBy", "operationType", "sourceWarehouse", "destinationWarehouse"})
+    @Query("select r from WarehouseRequest r where r.status = :status")
+    Page<WarehouseRequest> findApprovalQueue(@Param("status") WarehouseRequestStatus status,
+            Pageable pageable);
+
     @EntityGraph(attributePaths = {"createdBy", "operationType", "operationType.materialGroups",
             "operationType.allowedConditions", "reason", "sourceWarehouse", "destinationWarehouse",
             "purchaseOrder", "details", "details.material", "details.material.materialGroup",

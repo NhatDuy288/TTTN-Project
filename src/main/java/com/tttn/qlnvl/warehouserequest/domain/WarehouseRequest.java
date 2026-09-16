@@ -94,6 +94,10 @@ public class WarehouseRequest {
         this.status = WarehouseRequestStatus.CANCELLED;
     }
 
+    public void approve() { this.status = WarehouseRequestStatus.APPROVED; }
+    public void startProcessing() { this.status = WarehouseRequestStatus.PROCESSING; }
+    public void reject() { this.status = WarehouseRequestStatus.REJECTED; }
+
     public void replaceDetails(List<DetailDefinition> definitions) {
         details.clear();
         definitions.forEach(definition -> details.add(new WarehouseRequestDetail(this,
