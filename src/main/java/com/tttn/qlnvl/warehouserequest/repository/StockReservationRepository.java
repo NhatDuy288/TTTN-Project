@@ -2,11 +2,23 @@ package com.tttn.qlnvl.warehouserequest.repository;
 
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
 import com.tttn.qlnvl.warehouserequest.domain.StockReservation;
+import jakarta.persistence.LockModeType;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface StockReservationRepository extends JpaRepository<StockReservation, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select reservation from StockReservation reservation
+            where reservation.requestDetail.request.id = :requestId
+              and reservation.status = com.tttn.qlnvl.warehouserequest.domain.StockReservationStatus.ACTIVE_SOFT
+            order by reservation.id
+            """)
+    List<StockReservation> findActiveByRequestIdForUpdate(@Param("requestId") Long requestId);
+
     @Query("""
             select coalesce(sum(reservation.quantity), 0)
             from StockReservation reservation

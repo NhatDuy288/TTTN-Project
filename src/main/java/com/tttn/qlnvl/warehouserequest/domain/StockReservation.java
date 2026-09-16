@@ -59,6 +59,11 @@ public class StockReservation {
         createdAt = Instant.now();
     }
 
+    public void release() {
+        this.status = StockReservationStatus.RELEASED;
+        this.releasedAt = Instant.now();
+    }
+
     public Long getId() { return id; }
     public WarehouseRequestDetail getRequestDetail() { return requestDetail; }
     public Warehouse getWarehouse() { return warehouse; }

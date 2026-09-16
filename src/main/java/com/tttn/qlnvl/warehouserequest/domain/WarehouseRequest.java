@@ -90,6 +90,10 @@ public class WarehouseRequest {
         this.status = WarehouseRequestStatus.SUBMITTED;
     }
 
+    public void cancel() {
+        this.status = WarehouseRequestStatus.CANCELLED;
+    }
+
     public void replaceDetails(List<DetailDefinition> definitions) {
         details.clear();
         definitions.forEach(definition -> details.add(new WarehouseRequestDetail(this,

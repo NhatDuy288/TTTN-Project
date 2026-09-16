@@ -3,6 +3,7 @@ package com.tttn.qlnvl.warehouserequest.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,6 +31,7 @@ import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
 import com.tttn.qlnvl.warehouserequest.domain.OperationDirection;
 import com.tttn.qlnvl.warehouserequest.domain.OperationType;
 import com.tttn.qlnvl.warehouserequest.domain.Reason;
+import com.tttn.qlnvl.warehouserequest.domain.StockReservation;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestDetail;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestStatus;
@@ -43,6 +45,8 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 class WarehouseRequestServiceTest {
     private WarehouseRequestRepository requestRepository;
@@ -77,6 +81,23 @@ class WarehouseRequestServiceTest {
                 stockReservationRepository, statusHistoryRepository, appUserRepository);
         when(requestRepository.saveAndFlush(any(WarehouseRequest.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    @Test
+    void searchesOnlyOwnedRequestsWithSafePagingAndRecentActivitySort() {
+        when(requestRepository.searchOwned(eq(99L), eq("OUT"),
+                eq(WarehouseRequestStatus.SUBMITTED), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        service.searchOwned(99L, "  OUT  ", WarehouseRequestStatus.SUBMITTED, -2, 999);
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(requestRepository).searchOwned(eq(99L), eq("OUT"),
+                eq(WarehouseRequestStatus.SUBMITTED), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isZero();
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(20);
+        assertThat(pageable.getValue().getSort().getOrderFor("updatedAt").isDescending()).isTrue();
+        assertThat(pageable.getValue().getSort().getOrderFor("id").isDescending()).isTrue();
     }
 
     @Test
@@ -300,6 +321,58 @@ class WarehouseRequestServiceTest {
         verify(request).submit();
         verify(stockReservationRepository, never()).saveAll(any());
         verify(statusHistoryRepository).save(any(StatusHistory.class));
+    }
+
+    @Test
+    void cancelDraftChangesStatusAndWritesHistoryWithoutReservationRelease() {
+        OperationType operation = operation(1L, OperationDirection.IMPORT, false,
+                Set.of(), Set.of());
+        WarehouseRequest request = submitRequest(7L, 99L, operation, null, warehouse(11L),
+                null, List.of());
+        when(requestRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(request));
+
+        service.cancel(7L, 99L);
+
+        verify(request).cancel();
+        verify(stockReservationRepository, never()).findActiveByRequestIdForUpdate(any());
+        verify(statusHistoryRepository).save(any(StatusHistory.class));
+    }
+
+    @Test
+    void cancelSubmittedExportReleasesActiveSoftReservations() {
+        OperationType operation = operation(1L, OperationDirection.EXPORT, false,
+                Set.of(), Set.of());
+        WarehouseRequest request = submitRequest(7L, 99L, operation, warehouse(10L), null,
+                null, List.of());
+        when(request.getStatus()).thenReturn(WarehouseRequestStatus.SUBMITTED);
+        StockReservation reservation = mock(StockReservation.class);
+        when(requestRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(request));
+        when(stockReservationRepository.findActiveByRequestIdForUpdate(7L))
+                .thenReturn(List.of(reservation));
+
+        service.cancel(7L, 99L);
+
+        verify(reservation).release();
+        verify(stockReservationRepository).saveAll(List.of(reservation));
+        verify(request).cancel();
+        verify(statusHistoryRepository).save(any(StatusHistory.class));
+    }
+
+    @Test
+    void cancelRejectsRequestAfterApprovalWithoutMutation() {
+        OperationType operation = operation(1L, OperationDirection.EXPORT, false,
+                Set.of(), Set.of());
+        WarehouseRequest request = submitRequest(7L, 99L, operation, warehouse(10L), null,
+                null, List.of());
+        when(request.getStatus()).thenReturn(WarehouseRequestStatus.APPROVED);
+        when(requestRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.cancel(7L, 99L))
+                .isInstanceOf(WarehouseRequestConflictException.class);
+
+        verify(request, never()).cancel();
+        verify(stockReservationRepository, never()).findActiveByRequestIdForUpdate(any());
+        verify(statusHistoryRepository, never()).save(any());
     }
 
     private WarehouseRequest submitRequest(Long id, Long ownerId, OperationType operation,

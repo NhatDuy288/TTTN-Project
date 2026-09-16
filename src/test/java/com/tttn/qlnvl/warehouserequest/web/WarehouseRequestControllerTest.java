@@ -21,12 +21,14 @@ import com.tttn.qlnvl.warehouserequest.application.WarehouseRequestFormOptions;
 import com.tttn.qlnvl.warehouserequest.application.WarehouseRequestOptionService;
 import com.tttn.qlnvl.warehouserequest.application.WarehouseRequestService;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
+import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestStatus;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -48,6 +50,33 @@ class WarehouseRequestControllerTest {
         mockMvc.perform(get("/requests/new").with(user("requester").roles("REQUESTER")))
                 .andExpect(status().isOk())
                 .andExpect(view().name("requests/form"));
+    }
+
+    @Test
+    void requesterCanListOnlyOwnedRequests() throws Exception {
+        AppUser user = mock(AppUser.class);
+        when(user.getId()).thenReturn(99L);
+        when(user.getUsername()).thenReturn("requester");
+        when(user.getPasswordHash()).thenReturn("hash");
+        when(user.getFullName()).thenReturn("Người đề nghị");
+        when(user.getRole()).thenReturn(Role.REQUESTER);
+        AppUserPrincipal principal = AppUserPrincipal.from(user);
+        when(requestService.searchOwned(99L, "OUT", WarehouseRequestStatus.SUBMITTED, 0, 20))
+                .thenReturn(Page.empty());
+
+        mockMvc.perform(get("/requests").with(user(principal))
+                        .param("keyword", "OUT")
+                        .param("status", "SUBMITTED"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("requests/list"));
+
+        verify(requestService).searchOwned(99L, "OUT", WarehouseRequestStatus.SUBMITTED, 0, 20);
+    }
+
+    @Test
+    void nonRequesterCannotListRequests() throws Exception {
+        mockMvc.perform(get("/requests").with(user("keeper").roles("WAREHOUSE_KEEPER")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -95,5 +124,22 @@ class WarehouseRequestControllerTest {
                 .andExpect(redirectedUrl("/requests/5"));
 
         verify(requestService).submit(5L, 99L);
+    }
+
+    @Test
+    void requesterCanCancelOwnedDraftOrSubmittedRequest() throws Exception {
+        AppUser user = mock(AppUser.class);
+        when(user.getId()).thenReturn(99L);
+        when(user.getUsername()).thenReturn("requester");
+        when(user.getPasswordHash()).thenReturn("hash");
+        when(user.getFullName()).thenReturn("Người đề nghị");
+        when(user.getRole()).thenReturn(Role.REQUESTER);
+        AppUserPrincipal principal = AppUserPrincipal.from(user);
+
+        mockMvc.perform(post("/requests/5/cancel").with(user(principal)).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/requests/5"));
+
+        verify(requestService).cancel(5L, 99L);
     }
 }

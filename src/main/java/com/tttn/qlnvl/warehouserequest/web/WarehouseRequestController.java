@@ -7,7 +7,9 @@ import com.tttn.qlnvl.warehouserequest.application.WarehouseRequestOptionService
 import com.tttn.qlnvl.warehouserequest.application.WarehouseRequestService;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
+import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestStatus;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -30,6 +32,23 @@ public class WarehouseRequestController {
             WarehouseRequestOptionService optionService) {
         this.requestService = requestService;
         this.optionService = optionService;
+    }
+
+    @GetMapping("/requests")
+    String list(@RequestParam(required = false) String keyword,
+            @RequestParam(required = false) WarehouseRequestStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication, Model model) {
+        int selectedSize = List.of(20, 50, 100).contains(size) ? size : 20;
+        model.addAttribute("pageData", requestService.searchOwned(
+                actorId(authentication), keyword, status, page, size));
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("selectedStatus", status);
+        model.addAttribute("statuses", WarehouseRequestStatus.values());
+        model.addAttribute("pageSizes", List.of(20, 50, 100));
+        model.addAttribute("selectedSize", selectedSize);
+        return "requests/list";
     }
 
     @GetMapping("/requests/new")
@@ -104,6 +123,14 @@ public class WarehouseRequestController {
         } catch (InvalidWarehouseRequestException exception) {
             redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
         }
+        return "redirect:/requests/" + id;
+    }
+
+    @PostMapping("/requests/{id}/cancel")
+    String cancel(@PathVariable Long id, Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+        requestService.cancel(id, actorId(authentication));
+        redirectAttributes.addFlashAttribute("successMessage", "Đã hủy phiếu đề nghị.");
         return "redirect:/requests/" + id;
     }
 

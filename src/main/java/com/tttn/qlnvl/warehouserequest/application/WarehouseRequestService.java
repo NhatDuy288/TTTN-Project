@@ -43,12 +43,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WarehouseRequestService {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final Set<Integer> ALLOWED_PAGE_SIZES = Set.of(20, 50, 100);
 
     private final WarehouseRequestRepository requestRepository;
     private final OperationTypeRepository operationTypeRepository;
@@ -82,6 +86,17 @@ public class WarehouseRequestService {
         this.stockReservationRepository = stockReservationRepository;
         this.statusHistoryRepository = statusHistoryRepository;
         this.appUserRepository = appUserRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WarehouseRequest> searchOwned(Long actorId, String keyword,
+            WarehouseRequestStatus status, int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = ALLOWED_PAGE_SIZES.contains(size) ? size : 20;
+        String normalizedKeyword = normalize(keyword);
+        return requestRepository.searchOwned(actorId, normalizedKeyword, status,
+                PageRequest.of(safePage, safeSize,
+                        Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))));
     }
 
     @Transactional(readOnly = true)
@@ -169,6 +184,34 @@ public class WarehouseRequestService {
         statusHistoryRepository.save(new StatusHistory(AggregateType.REQUEST, request.getId(),
                 WarehouseRequestStatus.DRAFT.name(), WarehouseRequestStatus.SUBMITTED.name(),
                 WorkflowAction.SUBMIT, request.getCreatedBy(), null));
+        return request;
+    }
+
+    @Transactional
+    public WarehouseRequest cancel(Long id, Long actorId) {
+        WarehouseRequest request = requestRepository.findByIdForUpdate(id)
+                .orElseThrow(WarehouseRequestNotFoundException::new);
+        requireOwner(request, actorId);
+        WarehouseRequestStatus fromStatus = request.getStatus();
+        if (fromStatus != WarehouseRequestStatus.DRAFT
+                && fromStatus != WarehouseRequestStatus.SUBMITTED) {
+            throw new WarehouseRequestConflictException(
+                    "Chỉ được hủy phiếu đang lưu nháp hoặc đang chờ duyệt.");
+        }
+
+        if (fromStatus == WarehouseRequestStatus.SUBMITTED
+                && request.getOperationType().getDirection() != OperationDirection.IMPORT) {
+            List<StockReservation> reservations = stockReservationRepository
+                    .findActiveByRequestIdForUpdate(request.getId());
+            reservations.forEach(StockReservation::release);
+            stockReservationRepository.saveAll(reservations);
+        }
+
+        request.cancel();
+        requestRepository.saveAndFlush(request);
+        statusHistoryRepository.save(new StatusHistory(AggregateType.REQUEST, request.getId(),
+                fromStatus.name(), WarehouseRequestStatus.CANCELLED.name(),
+                WorkflowAction.CANCEL, request.getCreatedBy(), null));
         return request;
     }
 
