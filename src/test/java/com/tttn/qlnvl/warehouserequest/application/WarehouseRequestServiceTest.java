@@ -10,13 +10,19 @@ import static org.mockito.Mockito.when;
 
 import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.auth.repository.AppUserRepository;
+import com.tttn.qlnvl.inventory.domain.InventoryLot;
+import com.tttn.qlnvl.inventory.repository.InventoryLotRepository;
 import com.tttn.qlnvl.material.domain.Material;
 import com.tttn.qlnvl.material.domain.MaterialGroup;
 import com.tttn.qlnvl.material.domain.MaterialStatus;
 import com.tttn.qlnvl.material.repository.MaterialRepository;
 import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrder;
 import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderItem;
+import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderStatus;
+import com.tttn.qlnvl.purchaseorder.repository.PurchaseOrderItemRepository;
 import com.tttn.qlnvl.purchaseorder.repository.PurchaseOrderRepository;
+import com.tttn.qlnvl.shared.audit.StatusHistory;
+import com.tttn.qlnvl.shared.audit.StatusHistoryRepository;
 import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouse.domain.WarehouseStatus;
 import com.tttn.qlnvl.warehouse.repository.WarehouseRepository;
@@ -25,9 +31,11 @@ import com.tttn.qlnvl.warehouserequest.domain.OperationDirection;
 import com.tttn.qlnvl.warehouserequest.domain.OperationType;
 import com.tttn.qlnvl.warehouserequest.domain.Reason;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
+import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestDetail;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestStatus;
 import com.tttn.qlnvl.warehouserequest.repository.OperationTypeRepository;
 import com.tttn.qlnvl.warehouserequest.repository.ReasonRepository;
+import com.tttn.qlnvl.warehouserequest.repository.StockReservationRepository;
 import com.tttn.qlnvl.warehouserequest.repository.WarehouseRequestRepository;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +51,10 @@ class WarehouseRequestServiceTest {
     private WarehouseRepository warehouseRepository;
     private MaterialRepository materialRepository;
     private PurchaseOrderRepository purchaseOrderRepository;
+    private PurchaseOrderItemRepository purchaseOrderItemRepository;
+    private InventoryLotRepository inventoryLotRepository;
+    private StockReservationRepository stockReservationRepository;
+    private StatusHistoryRepository statusHistoryRepository;
     private AppUserRepository appUserRepository;
     private WarehouseRequestService service;
 
@@ -54,10 +66,15 @@ class WarehouseRequestServiceTest {
         warehouseRepository = mock(WarehouseRepository.class);
         materialRepository = mock(MaterialRepository.class);
         purchaseOrderRepository = mock(PurchaseOrderRepository.class);
+        purchaseOrderItemRepository = mock(PurchaseOrderItemRepository.class);
+        inventoryLotRepository = mock(InventoryLotRepository.class);
+        stockReservationRepository = mock(StockReservationRepository.class);
+        statusHistoryRepository = mock(StatusHistoryRepository.class);
         appUserRepository = mock(AppUserRepository.class);
         service = new WarehouseRequestService(requestRepository, operationTypeRepository,
                 reasonRepository, warehouseRepository, materialRepository,
-                purchaseOrderRepository, appUserRepository);
+                purchaseOrderRepository, purchaseOrderItemRepository, inventoryLotRepository,
+                stockReservationRepository, statusHistoryRepository, appUserRepository);
         when(requestRepository.saveAndFlush(any(WarehouseRequest.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
@@ -192,6 +209,118 @@ class WarehouseRequestServiceTest {
         verify(request, never()).updateDraft(any(), any(), any(), any());
     }
 
+    @Test
+    void submitExportLocksAvailabilityCreatesSoftReservationAndHistory() {
+        MaterialGroup group = mock(MaterialGroup.class);
+        when(group.getId()).thenReturn(20L);
+        OperationType operation = operation(1L, OperationDirection.EXPORT, false,
+                Set.of(group), Set.of(MaterialCondition.NEW));
+        Warehouse source = warehouse(10L);
+        Material material = activeMaterial(30L, group);
+        WarehouseRequestDetail detail = mock(WarehouseRequestDetail.class);
+        when(detail.getMaterial()).thenReturn(material);
+        when(detail.getCondition()).thenReturn(MaterialCondition.NEW);
+        when(detail.getQuantity()).thenReturn(5L);
+        WarehouseRequest request = submitRequest(7L, 99L, operation, source, null, null, List.of(detail));
+        InventoryLot lot = mock(InventoryLot.class);
+        when(lot.getOnHandQuantity()).thenReturn(10L);
+        when(lot.getReservedQuantity()).thenReturn(1L);
+        when(requestRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(request));
+        when(inventoryLotRepository.findDimensionForUpdate(10L, 30L, MaterialCondition.NEW))
+                .thenReturn(List.of(lot));
+        when(stockReservationRepository.activeSoftQuantity(10L, 30L, MaterialCondition.NEW))
+                .thenReturn(2L);
+
+        service.submit(7L, 99L);
+
+        verify(request).submit();
+        verify(stockReservationRepository).saveAll(any());
+        verify(statusHistoryRepository).save(any(StatusHistory.class));
+    }
+
+    @Test
+    void submitExportRejectsInsufficientAvailabilityWithoutMutation() {
+        MaterialGroup group = mock(MaterialGroup.class);
+        when(group.getId()).thenReturn(20L);
+        OperationType operation = operation(1L, OperationDirection.EXPORT, false,
+                Set.of(group), Set.of(MaterialCondition.NEW));
+        Warehouse source = warehouse(10L);
+        Material material = activeMaterial(30L, group);
+        WarehouseRequestDetail detail = mock(WarehouseRequestDetail.class);
+        when(detail.getMaterial()).thenReturn(material);
+        when(detail.getCondition()).thenReturn(MaterialCondition.NEW);
+        when(detail.getQuantity()).thenReturn(5L);
+        WarehouseRequest request = submitRequest(7L, 99L, operation, source, null, null, List.of(detail));
+        InventoryLot lot = mock(InventoryLot.class);
+        when(lot.getOnHandQuantity()).thenReturn(5L);
+        when(lot.getReservedQuantity()).thenReturn(1L);
+        when(requestRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(request));
+        when(inventoryLotRepository.findDimensionForUpdate(10L, 30L, MaterialCondition.NEW))
+                .thenReturn(List.of(lot));
+        when(stockReservationRepository.activeSoftQuantity(10L, 30L, MaterialCondition.NEW))
+                .thenReturn(1L);
+
+        assertThatThrownBy(() -> service.submit(7L, 99L))
+                .isInstanceOf(InvalidWarehouseRequestException.class);
+
+        verify(request, never()).submit();
+        verify(stockReservationRepository, never()).saveAll(any());
+        verify(statusHistoryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitPoImportLocksItemAndChecksDerivedCommitment() {
+        MaterialGroup group = mock(MaterialGroup.class);
+        when(group.getId()).thenReturn(20L);
+        OperationType operation = operation(1L, OperationDirection.IMPORT, true,
+                Set.of(group), Set.of(MaterialCondition.NEW));
+        Warehouse destination = warehouse(11L);
+        Material material = activeMaterial(30L, group);
+        PurchaseOrder purchaseOrder = mock(PurchaseOrder.class);
+        when(purchaseOrder.getId()).thenReturn(50L);
+        when(purchaseOrder.getStatus()).thenReturn(PurchaseOrderStatus.OPEN);
+        PurchaseOrderItem item = mock(PurchaseOrderItem.class);
+        when(item.getId()).thenReturn(40L);
+        when(item.getPurchaseOrder()).thenReturn(purchaseOrder);
+        when(item.getOrderedQuantity()).thenReturn(10L);
+        WarehouseRequestDetail detail = mock(WarehouseRequestDetail.class);
+        when(detail.getMaterial()).thenReturn(material);
+        when(detail.getCondition()).thenReturn(MaterialCondition.NEW);
+        when(detail.getQuantity()).thenReturn(4L);
+        when(detail.getPurchaseOrderItem()).thenReturn(item);
+        WarehouseRequest request = submitRequest(7L, 99L, operation, null, destination,
+                purchaseOrder, List.of(detail));
+        when(requestRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(request));
+        when(purchaseOrderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(purchaseOrder));
+        when(purchaseOrderItemRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(item));
+        when(purchaseOrderItemRepository.committedQuantity(40L)).thenReturn(6L);
+
+        service.submit(7L, 99L);
+
+        verify(request).submit();
+        verify(stockReservationRepository, never()).saveAll(any());
+        verify(statusHistoryRepository).save(any(StatusHistory.class));
+    }
+
+    private WarehouseRequest submitRequest(Long id, Long ownerId, OperationType operation,
+            Warehouse source, Warehouse destination, PurchaseOrder purchaseOrder,
+            List<WarehouseRequestDetail> details) {
+        WarehouseRequest request = mock(WarehouseRequest.class);
+        AppUser owner = mock(AppUser.class);
+        Reason reason = reason(operation.getDirection(), false);
+        when(owner.getId()).thenReturn(ownerId);
+        when(request.getId()).thenReturn(id);
+        when(request.getCreatedBy()).thenReturn(owner);
+        when(request.getStatus()).thenReturn(WarehouseRequestStatus.DRAFT);
+        when(request.getOperationType()).thenReturn(operation);
+        when(request.getReason()).thenReturn(reason);
+        when(request.getSourceWarehouse()).thenReturn(source);
+        when(request.getDestinationWarehouse()).thenReturn(destination);
+        when(request.getPurchaseOrder()).thenReturn(purchaseOrder);
+        when(request.getDetails()).thenReturn(details);
+        return request;
+    }
+
     private OperationType operation(Long id, OperationDirection direction, boolean requiresPo,
             Set<MaterialGroup> groups, Set<MaterialCondition> conditions) {
         OperationType operation = mock(OperationType.class);
@@ -208,6 +337,7 @@ class WarehouseRequestServiceTest {
         Reason reason = mock(Reason.class);
         when(reason.getDirection()).thenReturn(direction);
         when(reason.isRequiresNote()).thenReturn(requiresNote);
+        when(reason.isActive()).thenReturn(true);
         return reason;
     }
 

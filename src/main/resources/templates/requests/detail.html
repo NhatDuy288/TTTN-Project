@@ -4,8 +4,9 @@
 <body>
 <header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
 <main class="page-shell">
-    <div class="page-heading"><div><p class="eyebrow">UC-07</p><h1 th:text="${request.requestCode}">INP_20260915_001</h1><p class="muted">Chi tiết phiếu đề nghị kho của bạn.</p></div><a class="button-link button-secondary" th:href="@{/dashboard}">Tổng quan</a></div>
+    <div class="page-heading"><div><p class="eyebrow">UC-07 / UC-08</p><h1 th:text="${request.requestCode}">INP_20260915_001</h1><p class="muted">Chi tiết phiếu đề nghị kho của bạn.</p></div><a class="button-link button-secondary" th:href="@{/dashboard}">Tổng quan</a></div>
     <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
+    <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}">Không thể chuyển duyệt</div>
     <dl class="detail-grid">
         <div><dt>Loại phiếu</dt><dd th:text="${request.operationType.code + ' - ' + request.operationType.name}">Loại phiếu</dd></div>
         <div><dt>Trạng thái</dt><dd><span class="status-pill" th:text="${request.status.displayName}">Lưu nháp</span></dd></div>
@@ -21,7 +22,12 @@
         <tr th:each="detail : ${request.details}"><td th:text="${detail.material.materialCode + ' - ' + detail.material.materialName}">Vật tư</td><td th:text="${detail.material.unit.displayName}">ĐVT</td><td th:text="${detail.condition.displayName}">Tình trạng</td><td th:text="${detail.quantity}">1</td><td th:text="${detail.purchaseOrderItem == null ? '-' : request.purchaseOrder.poCode + ' · ' + detail.purchaseOrderItem.material.materialCode}">PO</td></tr>
         <tr th:if="${request.details.empty}"><td class="empty-state" colspan="5">Phiếu nháp chưa có vật tư.</td></tr>
     </tbody></table></div>
-    <div class="form-actions" th:if="${request.status.name() == 'DRAFT'}"><a class="button-link" th:href="@{/requests/{id}/edit(id=${request.id})}">Chỉnh sửa</a></div>
+    <div class="form-actions" th:if="${request.status.name() == 'DRAFT'}">
+        <a class="button-link button-secondary" th:href="@{/requests/{id}/edit(id=${request.id})}">Chỉnh sửa</a>
+        <form method="post" th:action="@{/requests/{id}/submit(id=${request.id})}">
+            <button type="submit">Chuyển duyệt</button>
+        </form>
+    </div>
 </main>
 </body>
 </html>

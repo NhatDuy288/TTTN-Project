@@ -86,6 +86,10 @@ public class WarehouseRequest {
         this.note = note;
     }
 
+    public void submit() {
+        this.status = WarehouseRequestStatus.SUBMITTED;
+    }
+
     public void replaceDetails(List<DetailDefinition> definitions) {
         details.clear();
         definitions.forEach(definition -> details.add(new WarehouseRequestDetail(this,

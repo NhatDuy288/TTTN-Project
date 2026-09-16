@@ -79,4 +79,21 @@ class WarehouseRequestControllerTest {
         mockMvc.perform(get("/requests/new").with(user("keeper").roles("WAREHOUSE_KEEPER")))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void requesterCanSubmitOwnedDraft() throws Exception {
+        AppUser user = mock(AppUser.class);
+        when(user.getId()).thenReturn(99L);
+        when(user.getUsername()).thenReturn("requester");
+        when(user.getPasswordHash()).thenReturn("hash");
+        when(user.getFullName()).thenReturn("Người đề nghị");
+        when(user.getRole()).thenReturn(Role.REQUESTER);
+        AppUserPrincipal principal = AppUserPrincipal.from(user);
+
+        mockMvc.perform(post("/requests/5/submit").with(user(principal)).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/requests/5"));
+
+        verify(requestService).submit(5L, 99L);
+    }
 }

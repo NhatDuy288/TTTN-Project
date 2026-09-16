@@ -95,6 +95,18 @@ public class WarehouseRequestController {
         }
     }
 
+    @PostMapping("/requests/{id}/submit")
+    String submit(@PathVariable Long id, Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+        try {
+            requestService.submit(id, actorId(authentication));
+            redirectAttributes.addFlashAttribute("successMessage", "Đã chuyển duyệt phiếu đề nghị.");
+        } catch (InvalidWarehouseRequestException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+        }
+        return "redirect:/requests/" + id;
+    }
+
     private void prepareForm(Model model, boolean editMode, WarehouseRequest request) {
         WarehouseRequestFormOptions options = optionService.load();
         model.addAttribute("options", options);

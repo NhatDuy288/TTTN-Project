@@ -1,11 +1,18 @@
 package com.tttn.qlnvl.purchaseorder.repository;
 
 import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderItem;
+import jakarta.persistence.LockModeType;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PurchaseOrderItemRepository extends JpaRepository<PurchaseOrderItem, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select item from PurchaseOrderItem item where item.id = :id")
+    Optional<PurchaseOrderItem> findByIdForUpdate(@Param("id") Long id);
+
     @Query(value = """
             select coalesce(sum(d.quantity), 0)
             from warehouse_request_detail d

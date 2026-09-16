@@ -2,12 +2,20 @@ package com.tttn.qlnvl.warehouserequest.application;
 
 import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.auth.repository.AppUserRepository;
+import com.tttn.qlnvl.inventory.domain.InventoryLot;
+import com.tttn.qlnvl.inventory.repository.InventoryLotRepository;
 import com.tttn.qlnvl.material.domain.Material;
 import com.tttn.qlnvl.material.domain.MaterialStatus;
 import com.tttn.qlnvl.material.repository.MaterialRepository;
 import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrder;
 import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderItem;
+import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderStatus;
+import com.tttn.qlnvl.purchaseorder.repository.PurchaseOrderItemRepository;
 import com.tttn.qlnvl.purchaseorder.repository.PurchaseOrderRepository;
+import com.tttn.qlnvl.shared.audit.AggregateType;
+import com.tttn.qlnvl.shared.audit.StatusHistory;
+import com.tttn.qlnvl.shared.audit.StatusHistoryRepository;
+import com.tttn.qlnvl.shared.audit.WorkflowAction;
 import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouse.domain.WarehouseStatus;
 import com.tttn.qlnvl.warehouse.repository.WarehouseRepository;
@@ -15,16 +23,20 @@ import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
 import com.tttn.qlnvl.warehouserequest.domain.OperationDirection;
 import com.tttn.qlnvl.warehouserequest.domain.OperationType;
 import com.tttn.qlnvl.warehouserequest.domain.Reason;
+import com.tttn.qlnvl.warehouserequest.domain.StockReservation;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest.DetailDefinition;
+import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestDetail;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestStatus;
 import com.tttn.qlnvl.warehouserequest.repository.OperationTypeRepository;
 import com.tttn.qlnvl.warehouserequest.repository.ReasonRepository;
+import com.tttn.qlnvl.warehouserequest.repository.StockReservationRepository;
 import com.tttn.qlnvl.warehouserequest.repository.WarehouseRequestRepository;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,18 +56,31 @@ public class WarehouseRequestService {
     private final WarehouseRepository warehouseRepository;
     private final MaterialRepository materialRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
+    private final PurchaseOrderItemRepository purchaseOrderItemRepository;
+    private final InventoryLotRepository inventoryLotRepository;
+    private final StockReservationRepository stockReservationRepository;
+    private final StatusHistoryRepository statusHistoryRepository;
     private final AppUserRepository appUserRepository;
 
     public WarehouseRequestService(WarehouseRequestRepository requestRepository,
             OperationTypeRepository operationTypeRepository, ReasonRepository reasonRepository,
             WarehouseRepository warehouseRepository, MaterialRepository materialRepository,
-            PurchaseOrderRepository purchaseOrderRepository, AppUserRepository appUserRepository) {
+            PurchaseOrderRepository purchaseOrderRepository,
+            PurchaseOrderItemRepository purchaseOrderItemRepository,
+            InventoryLotRepository inventoryLotRepository,
+            StockReservationRepository stockReservationRepository,
+            StatusHistoryRepository statusHistoryRepository,
+            AppUserRepository appUserRepository) {
         this.requestRepository = requestRepository;
         this.operationTypeRepository = operationTypeRepository;
         this.reasonRepository = reasonRepository;
         this.warehouseRepository = warehouseRepository;
         this.materialRepository = materialRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
+        this.purchaseOrderItemRepository = purchaseOrderItemRepository;
+        this.inventoryLotRepository = inventoryLotRepository;
+        this.stockReservationRepository = stockReservationRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
         this.appUserRepository = appUserRepository;
     }
 
@@ -117,6 +142,139 @@ public class WarehouseRequestService {
         requestRepository.flush();
         request.addDetails(draft.details());
         return requestRepository.saveAndFlush(request);
+    }
+
+    @Transactional
+    public WarehouseRequest submit(Long id, Long actorId) {
+        WarehouseRequest request = requestRepository.findByIdForUpdate(id)
+                .orElseThrow(WarehouseRequestNotFoundException::new);
+        requireOwner(request, actorId);
+        if (request.getStatus() != WarehouseRequestStatus.DRAFT) {
+            throw new WarehouseRequestConflictException("Chỉ được chuyển duyệt phiếu đang lưu nháp.");
+        }
+        validateForSubmit(request);
+
+        if (request.getOperationType().getDirection() == OperationDirection.IMPORT) {
+            validatePurchaseOrderCapacity(request);
+        } else {
+            validateAvailability(request);
+            List<StockReservation> reservations = request.getDetails().stream()
+                    .map(detail -> new StockReservation(detail, request.getSourceWarehouse()))
+                    .toList();
+            stockReservationRepository.saveAll(reservations);
+        }
+
+        request.submit();
+        requestRepository.saveAndFlush(request);
+        statusHistoryRepository.save(new StatusHistory(AggregateType.REQUEST, request.getId(),
+                WarehouseRequestStatus.DRAFT.name(), WarehouseRequestStatus.SUBMITTED.name(),
+                WorkflowAction.SUBMIT, request.getCreatedBy(), null));
+        return request;
+    }
+
+    private void validateForSubmit(WarehouseRequest request) {
+        OperationType operation = request.getOperationType();
+        if (!operation.isActive()) throw invalid(null, "Loại phiếu không còn hoạt động.");
+        if (!request.getReason().isActive() || request.getReason().getDirection() != operation.getDirection()) {
+            throw invalid(null, "Lý do không còn hợp lệ với loại phiếu.");
+        }
+        if (request.getReason().isRequiresNote() && normalize(request.getNote()) == null) {
+            throw invalid(null, "Ghi chú là bắt buộc với lý do đã chọn.");
+        }
+        validateSubmitWarehouses(request, operation.getDirection());
+        if (request.getDetails().isEmpty()) {
+            throw invalid(null, "Phiếu phải có ít nhất một dòng vật tư hợp lệ.");
+        }
+        Set<Long> allowedGroupIds = operation.getMaterialGroups().stream()
+                .map(group -> group.getId()).collect(Collectors.toSet());
+        for (WarehouseRequestDetail detail : request.getDetails()) {
+            if (detail.getMaterial().getStatus() != MaterialStatus.ACTIVE
+                    || !allowedGroupIds.contains(detail.getMaterial().getMaterialGroup().getId())
+                    || !operation.getAllowedConditions().contains(detail.getCondition())
+                    || detail.getQuantity() <= 0) {
+                throw invalid(null, "Phiếu có dòng vật tư không còn hợp lệ.");
+            }
+        }
+        PurchaseOrder purchaseOrder = request.getPurchaseOrder();
+        if (operation.isRequiresPo() && purchaseOrder == null) {
+            throw invalid(null, "Loại phiếu này bắt buộc tham chiếu PO.");
+        }
+        if (operation.getDirection() != OperationDirection.IMPORT && purchaseOrder != null) {
+            throw invalid(null, "Chỉ phiếu nhập được tham chiếu PO.");
+        }
+    }
+
+    private void validateSubmitWarehouses(WarehouseRequest request, OperationDirection direction) {
+        Warehouse source = request.getSourceWarehouse();
+        Warehouse destination = request.getDestinationWarehouse();
+        if (direction == OperationDirection.IMPORT) {
+            if (source != null || destination == null || destination.getStatus() != WarehouseStatus.ACTIVE) {
+                throw invalid(null, "Kho nhận của phiếu không còn hợp lệ.");
+            }
+        } else if (direction == OperationDirection.EXPORT) {
+            if (source == null || source.getStatus() != WarehouseStatus.ACTIVE || destination != null) {
+                throw invalid(null, "Kho xuất của phiếu không còn hợp lệ.");
+            }
+        } else if (source == null || destination == null
+                || source.getStatus() != WarehouseStatus.ACTIVE
+                || destination.getStatus() != WarehouseStatus.ACTIVE
+                || source.getId().equals(destination.getId())) {
+            throw invalid(null, "Kho nguồn và kho nhận của phiếu điều chuyển không còn hợp lệ.");
+        }
+    }
+
+    private void validateAvailability(WarehouseRequest request) {
+        Long warehouseId = request.getSourceWarehouse().getId();
+        Map<AvailabilityKey, Long> requestedByDimension = new HashMap<>();
+        for (WarehouseRequestDetail detail : request.getDetails()) {
+            AvailabilityKey key = new AvailabilityKey(detail.getMaterial().getId(), detail.getCondition());
+            requestedByDimension.merge(key, detail.getQuantity(), Math::addExact);
+        }
+        List<AvailabilityKey> keys = requestedByDimension.keySet().stream()
+                .sorted(Comparator.comparing(AvailabilityKey::materialId)
+                        .thenComparing(key -> key.condition().name()))
+                .toList();
+        for (AvailabilityKey key : keys) {
+            List<InventoryLot> lots = inventoryLotRepository.findDimensionForUpdate(
+                    warehouseId, key.materialId(), key.condition());
+            long onHand = lots.stream().mapToLong(InventoryLot::getOnHandQuantity).sum();
+            long lotReserved = lots.stream().mapToLong(InventoryLot::getReservedQuantity).sum();
+            long softReserved = stockReservationRepository.activeSoftQuantity(
+                    warehouseId, key.materialId(), key.condition());
+            long available = onHand - lotReserved - softReserved;
+            if (requestedByDimension.get(key) > available) {
+                throw invalid(null, "Số lượng yêu cầu vượt tồn khả dụng.");
+            }
+        }
+    }
+
+    private void validatePurchaseOrderCapacity(WarehouseRequest request) {
+        if (!request.getOperationType().isRequiresPo()) return;
+        PurchaseOrder referencedPurchaseOrder = request.getPurchaseOrder();
+        PurchaseOrder purchaseOrder = purchaseOrderRepository.findByIdForUpdate(referencedPurchaseOrder.getId())
+                .orElseThrow(() -> invalid(null, "PO không tồn tại."));
+        if (purchaseOrder.getStatus() != PurchaseOrderStatus.OPEN
+                && purchaseOrder.getStatus() != PurchaseOrderStatus.PARTIALLY_RECEIVED) {
+            throw invalid(null, "PO phải ở trạng thái Mở hoặc Đã nhận một phần.");
+        }
+        Map<Long, Long> requestedByItem = new HashMap<>();
+        for (WarehouseRequestDetail detail : request.getDetails()) {
+            PurchaseOrderItem item = detail.getPurchaseOrderItem();
+            if (item == null) throw invalid(null, "Mỗi dòng vật tư phải tham chiếu một dòng PO.");
+            requestedByItem.merge(item.getId(), detail.getQuantity(), Math::addExact);
+        }
+        for (Long itemId : requestedByItem.keySet().stream().sorted().toList()) {
+            PurchaseOrderItem lockedItem = purchaseOrderItemRepository.findByIdForUpdate(itemId)
+                    .orElseThrow(() -> invalid(null, "Dòng PO không tồn tại."));
+            if (!lockedItem.getPurchaseOrder().getId().equals(purchaseOrder.getId())) {
+                throw invalid(null, "Dòng PO không thuộc PO của phiếu.");
+            }
+            long remaining = lockedItem.getOrderedQuantity()
+                    - purchaseOrderItemRepository.committedQuantity(itemId);
+            if (requestedByItem.get(itemId) > remaining) {
+                throw invalid(null, "Số lượng yêu cầu vượt số lượng PO còn có thể cam kết.");
+            }
+        }
     }
 
     private ValidatedDraft validateDraft(WarehouseRequestDraftCommand command,
@@ -246,6 +404,7 @@ public class WarehouseRequestService {
         return invalid("details[" + index + "]." + field, message);
     }
     private record IndexedDetail(int index, WarehouseRequestDraftCommand.Detail detail) {}
+    private record AvailabilityKey(Long materialId, MaterialCondition condition) {}
     private record ValidatedDraft(Reason reason, Warehouse source, Warehouse destination,
             PurchaseOrder purchaseOrder, String note, List<DetailDefinition> details) {}
 }
