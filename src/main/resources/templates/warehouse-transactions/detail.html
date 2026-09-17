@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${transaction.transactionCode + ' | Chứng từ nhập xuất'}">Chứng từ nhập xuất</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a>
+    <form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form>
+</header>
+<main class="page-shell">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">UC-12</p>
+            <h1 th:text="${transaction.transactionCode}">GRN_INP_20260917_001</h1>
+            <p class="muted">Dữ liệu nguồn và phân bổ FIFO chỉ đọc; submit không làm thay đổi tồn kho.</p>
+        </div>
+        <a class="button-link button-secondary" th:href="@{/warehouse-transactions}">Danh sách chứng từ</a>
+    </div>
+
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
+
+    <dl class="detail-grid">
+        <div><dt>Mã phiếu đề nghị</dt><dd th:text="${transaction.request.requestCode}">INP_20260917_001</dd></div>
+        <div><dt>Trạng thái chứng từ</dt><dd><span class="status-pill" th:text="${transaction.status.displayName}">Lưu nháp</span></dd></div>
+        <div><dt>Loại phiếu</dt><dd th:text="${transaction.request.operationType.code + ' - ' + transaction.request.operationType.name}">Loại phiếu</dd></div>
+        <div><dt>Người đề nghị</dt><dd th:text="${transaction.request.createdBy.username + ' - ' + transaction.request.createdBy.fullName}">User</dd></div>
+        <div><dt>Kho nguồn</dt><dd th:text="${transaction.request.sourceWarehouse == null ? 'Không áp dụng' : transaction.request.sourceWarehouse.warehouseCode + ' - ' + transaction.request.sourceWarehouse.warehouseName}">Kho</dd></div>
+        <div><dt>Kho nhận</dt><dd th:text="${transaction.request.destinationWarehouse == null ? 'Không áp dụng' : transaction.request.destinationWarehouse.warehouseCode + ' - ' + transaction.request.destinationWarehouse.warehouseName}">Kho</dd></div>
+        <div><dt>Lý do</dt><dd th:text="${transaction.request.reason.code + ' - ' + transaction.request.reason.name}">Lý do</dd></div>
+        <div><dt>Purchase Order</dt><dd th:text="${transaction.request.purchaseOrder == null ? 'Không tham chiếu' : transaction.request.purchaseOrder.poCode}">PO</dd></div>
+        <div class="detail-grid-wide"><dt>Ghi chú đề nghị</dt><dd th:text="${transaction.request.note == null ? 'Không có' : transaction.request.note}">Ghi chú</dd></div>
+    </dl>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Vật tư</th><th>ĐVT</th><th>Tình trạng</th><th>Số lượng</th><th>Đơn giá PO</th><th>Phân bổ FIFO đã duyệt</th></tr></thead>
+            <tbody>
+            <tr th:each="detail : ${transaction.details}">
+                <td th:text="${detail.requestDetail.material.materialCode + ' - ' + detail.requestDetail.material.materialName}">Vật tư</td>
+                <td th:text="${detail.requestDetail.material.unit.displayName}">ĐVT</td>
+                <td th:text="${detail.requestDetail.condition.displayName}">Tình trạng</td>
+                <td th:text="${detail.requestDetail.quantity}">1</td>
+                <td th:text="${detail.requestDetail.purchaseOrderItem == null || detail.requestDetail.purchaseOrderItem.unitPrice == null ? '-' : detail.requestDetail.purchaseOrderItem.unitPrice}">-</td>
+                <td>
+                    <span th:if="${detail.allocations.empty}">Không áp dụng</span>
+                    <ul class="allocation-list" th:unless="${detail.allocations.empty}">
+                        <li th:each="allocation : ${detail.allocations}"
+                            th:text="${'Lô #' + allocation.inventoryLot.id + ' · ' + @businessDisplay.dateTime(allocation.inventoryLot.receivedAt) + ' · SL ' + allocation.allocatedQuantity + ' · Đơn giá ' + (allocation.allocatedUnitPrice == null ? '-' : allocation.allocatedUnitPrice)}">Lô</li>
+                    </ul>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form class="form-card transaction-submit-card" method="post"
+          th:if="${transaction.status.name() == 'DRAFT'}"
+          th:action="@{/warehouse-transactions/{id}/submit(id=${transaction.id})}"
+          th:object="${submitForm}">
+        <label for="executionNote">Ghi chú thực hiện (không bắt buộc)</label>
+        <textarea id="executionNote" th:field="*{executionNote}" maxlength="1000" rows="5"></textarea>
+        <p class="field-error" th:if="${#fields.hasErrors('executionNote')}" th:errors="*{executionNote}">Lỗi</p>
+        <p class="form-hint">Tối đa 1000 ký tự. Các thông tin nghiệp vụ và phân bổ không thể sửa ở bước này.</p>
+        <div class="form-actions"><button type="submit">Chuyển duyệt</button></div>
+    </form>
+
+    <section class="form-card transaction-submit-card" th:unless="${transaction.status.name() == 'DRAFT'}">
+        <h2>Ghi chú thực hiện</h2>
+        <p class="readonly-value" th:text="${transaction.executionNote == null ? 'Không có' : transaction.executionNote}">Không có</p>
+    </section>
+</main>
+</body>
+</html>

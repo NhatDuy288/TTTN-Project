@@ -54,4 +54,11 @@ public class InventoryLot {
         }
         reservedQuantity += quantity;
     }
+
+    public void releaseReservation(long quantity) {
+        if (quantity <= 0 || quantity > reservedQuantity) {
+            throw new IllegalArgumentException("Invalid lot reservation release quantity");
+        }
+        reservedQuantity -= quantity;
+    }
 }

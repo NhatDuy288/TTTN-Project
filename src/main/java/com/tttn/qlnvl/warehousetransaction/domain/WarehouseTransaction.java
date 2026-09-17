@@ -35,6 +35,8 @@ public class WarehouseTransaction {
     @Enumerated(EnumType.STRING)
     @Column(name = "warehouse_status", nullable = false, length = 40)
     private WarehouseTransactionStatus status;
+    @Column(name = "execution_note", length = 1000)
+    private String executionNote;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -61,9 +63,20 @@ public class WarehouseTransaction {
     }
     @PreUpdate void updateTimestamp() { updatedAt = Instant.now(); }
 
+    public void submit(String executionNote) {
+        this.executionNote = executionNote;
+        this.status = WarehouseTransactionStatus.SUBMITTED;
+    }
+
+    public void approve() { this.status = WarehouseTransactionStatus.READY_FOR_CONFIRMATION; }
+    public void reject() { this.status = WarehouseTransactionStatus.REJECTED; }
+
     public Long getId() { return id; }
     public String getTransactionCode() { return transactionCode; }
     public WarehouseRequest getRequest() { return request; }
     public WarehouseTransactionStatus getStatus() { return status; }
+    public String getExecutionNote() { return executionNote; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
     public List<WarehouseTransactionDetail> getDetails() { return Collections.unmodifiableList(details); }
 }

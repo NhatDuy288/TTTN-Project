@@ -11,6 +11,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select lot from InventoryLot lot where lot.id in :ids order by lot.id")
+    List<InventoryLot> findAllByIdForUpdate(@Param("ids") List<Long> ids);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select lot from InventoryLot lot
             where lot.warehouse.id = :warehouseId
