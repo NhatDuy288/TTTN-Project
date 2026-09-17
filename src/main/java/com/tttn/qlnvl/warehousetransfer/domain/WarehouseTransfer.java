@@ -47,6 +47,11 @@ public class WarehouseTransfer {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_confirmed_by_user_id")
     private AppUser sourceConfirmedBy;
+    @Column(name = "destination_confirmed_at")
+    private Instant destinationConfirmedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_confirmed_by_user_id")
+    private AppUser destinationConfirmedBy;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -80,6 +85,11 @@ public class WarehouseTransfer {
         this.sourceConfirmedAt = confirmedAt;
         this.status = WarehouseTransferStatus.IN_TRANSIT;
     }
+    public void confirmDestination(AppUser actor, Instant confirmedAt) {
+        this.destinationConfirmedBy = actor;
+        this.destinationConfirmedAt = confirmedAt;
+        this.status = WarehouseTransferStatus.COMPLETED;
+    }
 
     public Long getId() { return id; }
     public WarehouseRequest getRequest() { return request; }
@@ -88,6 +98,8 @@ public class WarehouseTransfer {
     public WarehouseTransferStatus getStatus() { return status; }
     public Instant getSourceConfirmedAt() { return sourceConfirmedAt; }
     public AppUser getSourceConfirmedBy() { return sourceConfirmedBy; }
+    public Instant getDestinationConfirmedAt() { return destinationConfirmedAt; }
+    public AppUser getDestinationConfirmedBy() { return destinationConfirmedBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<WarehouseTransferDetail> getDetails() { return Collections.unmodifiableList(details); }

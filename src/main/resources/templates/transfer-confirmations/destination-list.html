@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Xác nhận nhập điều chuyển | Quản lý kho vật tư</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a>
+    <form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form>
+</header>
+<main class="page-shell">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">UC-18</p>
+            <h1>Xác nhận nhập kho đích</h1>
+            <p class="muted">Danh sách điều chuyển đã xuất khỏi kho nguồn và đang chờ nhận toàn bộ tại kho đích.</p>
+        </div>
+        <a class="button-link button-secondary" th:href="@{/dashboard}">Tổng quan</a>
+    </div>
+
+    <form class="filter-panel approval-filter-panel" method="get" th:action="@{/transfer-confirmations/destination}">
+        <div>
+            <label for="size">Số dòng</label>
+            <select id="size" name="size">
+                <option th:each="item : ${pageSizes}" th:value="${item}" th:text="${item}"
+                        th:selected="${item == selectedSize}">20</option>
+            </select>
+        </div>
+        <button type="submit">Áp dụng</button>
+    </form>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>STT</th><th>Mã đề nghị</th><th>Kho nguồn</th><th>Kho nhận</th><th>Người xác nhận nguồn</th><th>Thời điểm xuất nguồn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <tbody>
+            <tr th:each="transfer, row : ${pageData.content}">
+                <td th:text="${pageData.number * pageData.size + row.count}">1</td>
+                <td th:text="${transfer.request.requestCode}">TRF_20260917_001</td>
+                <td th:text="${transfer.sourceWarehouse.warehouseCode + '' - '' + transfer.sourceWarehouse.warehouseName}">Kho nguồn</td>
+                <td th:text="${transfer.destinationWarehouse.warehouseCode + '' - '' + transfer.destinationWarehouse.warehouseName}">Kho nhận</td>
+                <td th:text="${transfer.sourceConfirmedBy.username + '' - '' + transfer.sourceConfirmedBy.fullName}">Thủ kho</td>
+                <td th:text="${@businessDisplay.dateTime(transfer.sourceConfirmedAt)}">17/09/2026</td>
+                <td><span class="status-pill" th:text="${transfer.status.displayName}">Đang vận chuyển</span></td>
+                <td><a th:href="@{/transfer-confirmations/destination/{id}(id=${transfer.id})}">Kiểm tra và xác nhận</a></td>
+            </tr>
+            <tr th:if="${pageData.empty}"><td class="empty-state" colspan="8">Không có điều chuyển chờ nhập kho đích.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <nav class="pagination" th:if="${pageData.totalPages > 1}">
+        <a th:if="${pageData.hasPrevious()}" th:href="@{/transfer-confirmations/destination(size=${selectedSize},page=${pageData.number - 1})}">Trang trước</a>
+        <span th:text="${''Trang '' + (pageData.number + 1) + ''/'' + pageData.totalPages}">Trang 1/1</span>
+        <a th:if="${pageData.hasNext()}" th:href="@{/transfer-confirmations/destination(size=${selectedSize},page=${pageData.number + 1})}">Trang sau</a>
+    </nav>
+</main>
+</body>
+</html>

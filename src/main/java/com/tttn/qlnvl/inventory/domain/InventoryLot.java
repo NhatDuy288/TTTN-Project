@@ -5,6 +5,7 @@ import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderItem;
 import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
 import com.tttn.qlnvl.warehousetransaction.domain.WarehouseTransactionDetail;
+import com.tttn.qlnvl.warehousetransfer.domain.TransferLotAllocation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -47,6 +49,9 @@ public class InventoryLot {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "receipt_transaction_detail_id", unique = true, updatable = false)
     private WarehouseTransactionDetail receiptTransactionDetail;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_transfer_allocation_id", unique = true, updatable = false)
+    private TransferLotAllocation sourceTransferAllocation;
 
     protected InventoryLot() {}
 
@@ -66,6 +71,31 @@ public class InventoryLot {
         this.receivedAt = receivedAt;
     }
 
+    public static InventoryLot receiveTransfer(Warehouse destinationWarehouse,
+            TransferLotAllocation sourceAllocation, Instant receivedAt) {
+        InventoryLot sourceLot = sourceAllocation.getInventoryLot();
+        return new InventoryLot(destinationWarehouse, sourceLot.getMaterial(),
+                sourceLot.getCondition(), sourceLot.getSourcePurchaseOrderItem(),
+                sourceAllocation, sourceAllocation.getAllocatedUnitPrice(),
+                sourceAllocation.getAllocatedQuantity(), receivedAt);
+    }
+
+    private InventoryLot(Warehouse warehouse, Material material, MaterialCondition condition,
+            PurchaseOrderItem sourcePurchaseOrderItem,
+            TransferLotAllocation sourceTransferAllocation, BigDecimal unitPrice,
+            long quantity, Instant receivedAt) {
+        if (quantity <= 0) throw new IllegalArgumentException("Invalid transfer receipt quantity");
+        this.warehouse = warehouse;
+        this.material = material;
+        this.condition = condition;
+        this.sourcePurchaseOrderItem = sourcePurchaseOrderItem;
+        this.sourceTransferAllocation = sourceTransferAllocation;
+        this.unitPrice = unitPrice;
+        this.onHandQuantity = quantity;
+        this.reservedQuantity = 0;
+        this.receivedAt = receivedAt;
+    }
+
     public Long getId() { return id; }
     public BigDecimal getUnitPrice() { return unitPrice; }
     public long getOnHandQuantity() { return onHandQuantity; }
@@ -77,6 +107,9 @@ public class InventoryLot {
     public PurchaseOrderItem getSourcePurchaseOrderItem() { return sourcePurchaseOrderItem; }
     public WarehouseTransactionDetail getReceiptTransactionDetail() {
         return receiptTransactionDetail;
+    }
+    public TransferLotAllocation getSourceTransferAllocation() {
+        return sourceTransferAllocation;
     }
 
     public void reserve(long quantity) {

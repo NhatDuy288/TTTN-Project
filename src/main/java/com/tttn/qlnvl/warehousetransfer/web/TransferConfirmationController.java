@@ -40,6 +40,22 @@ public class TransferConfirmationController {
         return "transfer-confirmations/source-detail";
     }
 
+    @GetMapping("/transfer-confirmations/destination")
+    String destinationList(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size, Model model) {
+        int selectedSize = List.of(20, 50, 100).contains(size) ? size : 20;
+        model.addAttribute("pageData", confirmationService.destinationQueue(page, size));
+        model.addAttribute("pageSizes", List.of(20, 50, 100));
+        model.addAttribute("selectedSize", selectedSize);
+        return "transfer-confirmations/destination-list";
+    }
+
+    @GetMapping("/transfer-confirmations/destination/{id}")
+    String destinationDetail(@PathVariable Long id, Model model) {
+        model.addAttribute("transfer", confirmationService.getDetail(id));
+        return "transfer-confirmations/destination-detail";
+    }
+
     @PostMapping("/transfer-confirmations/source/{id}/confirm")
     String confirmSource(@PathVariable Long id, Authentication authentication,
             RedirectAttributes redirectAttributes) {
@@ -52,6 +68,20 @@ public class TransferConfirmationController {
         redirectAttributes.addFlashAttribute("successMessage",
                 "Đã xác nhận xuất kho nguồn và chuyển điều chuyển sang đang vận chuyển.");
         return "redirect:/transfer-confirmations/source/" + id;
+    }
+
+    @PostMapping("/transfer-confirmations/destination/{id}/confirm")
+    String confirmDestination(@PathVariable Long id, Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+        try {
+            confirmationService.confirmDestination(id, actorId(authentication));
+        } catch (WarehouseTransferConflictException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+            return "redirect:/transfer-confirmations/destination/" + id;
+        }
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã xác nhận nhập kho đích và hoàn tất điều chuyển.");
+        return "redirect:/transfer-confirmations/destination/" + id;
     }
 
     private Long actorId(Authentication authentication) {

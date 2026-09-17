@@ -15,7 +15,8 @@ import org.springframework.data.repository.query.Param;
 public interface WarehouseTransferRepository extends JpaRepository<WarehouseTransfer, Long> {
     @EntityGraph(attributePaths = {
             "request", "request.operationType", "request.createdBy",
-            "sourceWarehouse", "destinationWarehouse"
+            "sourceWarehouse", "destinationWarehouse", "sourceConfirmedBy",
+            "destinationConfirmedBy"
     })
     @Query("select transfer from WarehouseTransfer transfer where transfer.status = :status")
     Page<WarehouseTransfer> findQueue(@Param("status") WarehouseTransferStatus status,
@@ -24,6 +25,7 @@ public interface WarehouseTransferRepository extends JpaRepository<WarehouseTran
     @EntityGraph(attributePaths = {
             "request", "request.operationType", "request.reason", "request.createdBy",
             "sourceWarehouse", "destinationWarehouse", "sourceConfirmedBy",
+            "destinationConfirmedBy",
             "details", "details.requestDetail",
             "details.requestDetail.material"
     })

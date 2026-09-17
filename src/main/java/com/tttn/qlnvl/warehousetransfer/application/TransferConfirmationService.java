@@ -58,6 +58,15 @@ public class TransferConfirmationService {
     }
 
     @Transactional(readOnly = true)
+    public Page<WarehouseTransfer> destinationQueue(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = ALLOWED_PAGE_SIZES.contains(size) ? size : 20;
+        return transferRepository.findQueue(WarehouseTransferStatus.IN_TRANSIT,
+                PageRequest.of(safePage, safeSize,
+                        Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))));
+    }
+
+    @Transactional(readOnly = true)
     public WarehouseTransfer getDetail(Long id) {
         WarehouseTransfer transfer = transferRepository.findDetailedById(id)
                 .orElseThrow(WarehouseTransferNotFoundException::new);
@@ -92,6 +101,69 @@ public class TransferConfirmationService {
                 WarehouseTransferStatus.IN_TRANSIT.name(), WorkflowAction.CONFIRM_SOURCE,
                 actor, null));
         return transfer;
+    }
+
+    @Transactional
+    public WarehouseTransfer confirmDestination(Long id, Long actorId) {
+        WarehouseTransfer transfer = transferRepository.findByIdForUpdate(id)
+                .orElseThrow(WarehouseTransferNotFoundException::new);
+        if (transfer.getStatus() != WarehouseTransferStatus.IN_TRANSIT) {
+            throw new WarehouseTransferConflictException(
+                    "Chỉ được xác nhận nhập đích khi điều chuyển đang vận chuyển.");
+        }
+        if (transfer.getSourceConfirmedAt() == null || transfer.getSourceConfirmedBy() == null) {
+            throw new WarehouseTransferConflictException(
+                    "Thông tin xác nhận xuất kho nguồn không còn nhất quán.");
+        }
+        WarehouseRequest request = requestRepository.findByIdForUpdate(
+                        transfer.getRequest().getId())
+                .orElseThrow(WarehouseTransferNotFoundException::new);
+        if (request.getStatus() != WarehouseRequestStatus.PROCESSING) {
+            throw new WarehouseTransferConflictException(
+                    "Phiếu đề nghị liên quan không còn ở trạng thái đang xử lý.");
+        }
+        if (transfer.getDestinationWarehouse() == null) {
+            throw new WarehouseTransferConflictException(
+                    "Điều chuyển không có kho nhận hợp lệ.");
+        }
+        AppUser actor = userRepository.findById(actorId)
+                .orElseThrow(WarehouseTransferNotFoundException::new);
+        Instant confirmedAt = Instant.now();
+
+        List<InventoryLot> destinationLots = destinationLots(transfer, confirmedAt);
+        lotRepository.saveAllAndFlush(destinationLots);
+        transfer.confirmDestination(actor, confirmedAt);
+        request.complete();
+        transferRepository.saveAndFlush(transfer);
+        requestRepository.saveAndFlush(request);
+        historyRepository.save(new StatusHistory(AggregateType.TRANSFER, transfer.getId(),
+                WarehouseTransferStatus.IN_TRANSIT.name(),
+                WarehouseTransferStatus.COMPLETED.name(), WorkflowAction.CONFIRM_DESTINATION,
+                actor, null));
+        historyRepository.save(new StatusHistory(AggregateType.REQUEST, request.getId(),
+                WarehouseRequestStatus.PROCESSING.name(), WarehouseRequestStatus.COMPLETED.name(),
+                WorkflowAction.COMPLETE, actor, null));
+        return transfer;
+    }
+
+    private List<InventoryLot> destinationLots(WarehouseTransfer transfer, Instant confirmedAt) {
+        if (transfer.getDetails().isEmpty()) {
+            throw inconsistentAllocation();
+        }
+        List<InventoryLot> destinationLots = new ArrayList<>();
+        for (WarehouseTransferDetail detail : transfer.getDetails()) {
+            long allocatedQuantity = detail.getAllocations().stream()
+                    .mapToLong(allocation -> allocation.getAllocatedQuantity())
+                    .sum();
+            if (detail.getAllocations().isEmpty()
+                    || allocatedQuantity != detail.getRequestDetail().getQuantity()) {
+                throw inconsistentAllocation();
+            }
+            detail.getAllocations().forEach(allocation -> destinationLots.add(
+                    InventoryLot.receiveTransfer(transfer.getDestinationWarehouse(), allocation,
+                            confirmedAt)));
+        }
+        return destinationLots;
     }
 
     private void issueAllocatedLots(WarehouseTransfer transfer) {

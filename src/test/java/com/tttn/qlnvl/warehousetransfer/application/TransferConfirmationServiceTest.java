@@ -3,8 +3,10 @@ package com.tttn.qlnvl.warehousetransfer.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,18 +14,22 @@ import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.auth.repository.AppUserRepository;
 import com.tttn.qlnvl.inventory.domain.InventoryLot;
 import com.tttn.qlnvl.inventory.repository.InventoryLotRepository;
+import com.tttn.qlnvl.material.domain.Material;
+import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderItem;
 import com.tttn.qlnvl.shared.audit.StatusHistory;
 import com.tttn.qlnvl.shared.audit.StatusHistoryRepository;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestDetail;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequestStatus;
 import com.tttn.qlnvl.warehouserequest.repository.WarehouseRequestRepository;
+import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehousetransfer.domain.TransferLotAllocation;
 import com.tttn.qlnvl.warehousetransfer.domain.WarehouseTransfer;
 import com.tttn.qlnvl.warehousetransfer.domain.WarehouseTransferDetail;
 import com.tttn.qlnvl.warehousetransfer.domain.WarehouseTransferStatus;
 import com.tttn.qlnvl.warehousetransfer.repository.WarehouseTransferRepository;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +69,20 @@ class TransferConfirmationServiceTest {
                 pageable.capture());
         assertThat(pageable.getValue().getPageNumber()).isZero();
         assertThat(pageable.getValue().getPageSize()).isEqualTo(50);
+    }
+
+    @Test
+    void destinationQueueUsesInTransitAndSafePagination() {
+        when(transferRepository.findQueue(any(), any())).thenReturn(Page.empty());
+
+        service.destinationQueue(-1, 100);
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(transferRepository).findQueue(
+                org.mockito.ArgumentMatchers.eq(WarehouseTransferStatus.IN_TRANSIT),
+                pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isZero();
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(100);
     }
 
     @Test
@@ -139,6 +159,89 @@ class TransferConfirmationServiceTest {
         verify(lotRepository, never()).flush();
     }
 
+    @Test
+    void confirmDestinationCreatesLotPerAllocationAndCompletesWorkflow() {
+        WarehouseRequest request = processingRequest();
+        Warehouse destination = mock(Warehouse.class);
+        Material material = mock(Material.class);
+        PurchaseOrderItem poItem = mock(PurchaseOrderItem.class);
+        InventoryLot sourceLot = mock(InventoryLot.class);
+        when(sourceLot.getMaterial()).thenReturn(material);
+        when(sourceLot.getCondition()).thenReturn(
+                com.tttn.qlnvl.warehouserequest.domain.MaterialCondition.NEW);
+        when(sourceLot.getSourcePurchaseOrderItem()).thenReturn(poItem);
+        TransferLotAllocation allocation = mock(TransferLotAllocation.class);
+        when(allocation.getInventoryLot()).thenReturn(sourceLot);
+        when(allocation.getAllocatedQuantity()).thenReturn(4L);
+        when(allocation.getAllocatedUnitPrice()).thenReturn(new BigDecimal("4500.0000"));
+        WarehouseRequestDetail requestDetail = mock(WarehouseRequestDetail.class);
+        when(requestDetail.getQuantity()).thenReturn(4L);
+        WarehouseTransferDetail detail = mock(WarehouseTransferDetail.class);
+        when(detail.getRequestDetail()).thenReturn(requestDetail);
+        when(detail.getAllocations()).thenReturn(List.of(allocation));
+        WarehouseTransfer transfer = inTransitTransfer(request, destination, List.of(detail), true);
+
+        service.confirmDestination(7L, 99L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<InventoryLot>> lots = ArgumentCaptor.forClass(List.class);
+        verify(lotRepository).saveAllAndFlush(lots.capture());
+        assertThat(lots.getValue()).hasSize(1);
+        InventoryLot destinationLot = lots.getValue().getFirst();
+        assertThat(destinationLot.getWarehouse()).isSameAs(destination);
+        assertThat(destinationLot.getMaterial()).isSameAs(material);
+        assertThat(destinationLot.getSourcePurchaseOrderItem()).isSameAs(poItem);
+        assertThat(destinationLot.getSourceTransferAllocation()).isSameAs(allocation);
+        assertThat(destinationLot.getUnitPrice()).isEqualByComparingTo("4500.0000");
+        assertThat(destinationLot.getOnHandQuantity()).isEqualTo(4L);
+        assertThat(destinationLot.getReservedQuantity()).isZero();
+        verify(sourceLot, never()).issue(anyLong());
+        verify(transfer).confirmDestination(any(AppUser.class), any(Instant.class));
+        verify(request).complete();
+        verify(transferRepository).saveAndFlush(transfer);
+        verify(requestRepository).saveAndFlush(request);
+        verify(historyRepository, times(2)).save(any(StatusHistory.class));
+    }
+
+    @Test
+    void confirmDestinationRejectsRepeatedConfirmationBeforeInventoryMutation() {
+        WarehouseTransfer transfer = mock(WarehouseTransfer.class);
+        when(transfer.getStatus()).thenReturn(WarehouseTransferStatus.COMPLETED);
+        when(transferRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(transfer));
+
+        assertThatThrownBy(() -> service.confirmDestination(7L, 99L))
+                .isInstanceOf(WarehouseTransferConflictException.class);
+
+        verify(lotRepository, never()).saveAllAndFlush(any());
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void confirmDestinationRejectsMissingSourceConfirmationMetadata() {
+        WarehouseRequest request = processingRequest();
+        inTransitTransfer(request, mock(Warehouse.class), List.of(), false);
+
+        assertThatThrownBy(() -> service.confirmDestination(7L, 99L))
+                .isInstanceOf(WarehouseTransferConflictException.class);
+
+        verify(lotRepository, never()).saveAllAndFlush(any());
+    }
+
+    @Test
+    void confirmDestinationRejectsIncompleteAllocation() {
+        WarehouseRequest request = processingRequest();
+        WarehouseTransferDetail detail = allocatedDetail(11L, 3L, 4L);
+        WarehouseTransfer transfer = inTransitTransfer(request, mock(Warehouse.class),
+                List.of(detail), true);
+
+        assertThatThrownBy(() -> service.confirmDestination(7L, 99L))
+                .isInstanceOf(WarehouseTransferConflictException.class);
+
+        verify(lotRepository, never()).saveAllAndFlush(any());
+        verify(transfer, never()).confirmDestination(any(), any());
+        verify(request, never()).complete();
+    }
+
     private WarehouseRequest processingRequest() {
         WarehouseRequest request = mock(WarehouseRequest.class);
         when(request.getId()).thenReturn(5L);
@@ -155,6 +258,22 @@ class TransferConfirmationServiceTest {
         when(transfer.getStatus()).thenReturn(WarehouseTransferStatus.READY_TO_TRANSFER);
         when(transfer.getRequest()).thenReturn(request);
         when(transfer.getDetails()).thenReturn(details);
+        when(transferRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(transfer));
+        return transfer;
+    }
+
+    private WarehouseTransfer inTransitTransfer(WarehouseRequest request, Warehouse destination,
+            List<WarehouseTransferDetail> details, boolean sourceConfirmed) {
+        WarehouseTransfer transfer = mock(WarehouseTransfer.class);
+        when(transfer.getId()).thenReturn(7L);
+        when(transfer.getStatus()).thenReturn(WarehouseTransferStatus.IN_TRANSIT);
+        when(transfer.getRequest()).thenReturn(request);
+        when(transfer.getDestinationWarehouse()).thenReturn(destination);
+        when(transfer.getDetails()).thenReturn(details);
+        if (sourceConfirmed) {
+            when(transfer.getSourceConfirmedAt()).thenReturn(Instant.parse("2026-09-17T01:00:00Z"));
+            when(transfer.getSourceConfirmedBy()).thenReturn(mock(AppUser.class));
+        }
         when(transferRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(transfer));
         return transfer;
     }

@@ -64,7 +64,8 @@ public class DashboardController {
             case "WAREHOUSE_KEEPER" -> {
                 shortcuts.add(new DashboardShortcut("Quản lý kho", "/warehouses"));
                 shortcuts.add(new DashboardShortcut("Xác nhận nhập xuất", "/transaction-confirmations"));
-                shortcuts.add(new DashboardShortcut("Xác nhận điều chuyển", "/transfer-confirmations/source"));
+                shortcuts.add(new DashboardShortcut("Xác nhận xuất điều chuyển", "/transfer-confirmations/source"));
+                shortcuts.add(new DashboardShortcut("Xác nhận nhập điều chuyển", "/transfer-confirmations/destination"));
                 shortcuts.add(new DashboardShortcut("Nhập xuất tồn", "/reports/nxt"));
                 shortcuts.add(new DashboardShortcut("Thẻ kho", "/reports/stock-card"));
             }

@@ -50,6 +50,16 @@ class TransferConfirmationControllerTest {
     }
 
     @Test
+    void warehouseKeeperCanOpenDestinationConfirmationQueue() throws Exception {
+        when(confirmationService.destinationQueue(0, 20)).thenReturn(Page.empty());
+
+        mockMvc.perform(get("/transfer-confirmations/destination")
+                        .with(user("keeper").roles("WAREHOUSE_KEEPER")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("transfer-confirmations/destination-list"));
+    }
+
+    @Test
     void warehouseKeeperCanConfirmSourceMovement() throws Exception {
         mockMvc.perform(post("/transfer-confirmations/source/7/confirm")
                         .with(user(keeperPrincipal())).with(csrf()))
@@ -67,6 +77,26 @@ class TransferConfirmationControllerTest {
                 .andExpect(redirectedUrl("/login?expired"));
 
         verify(confirmationService, never()).confirmSource(anyLong(), anyLong());
+    }
+
+    @Test
+    void warehouseKeeperCanConfirmDestinationMovement() throws Exception {
+        mockMvc.perform(post("/transfer-confirmations/destination/7/confirm")
+                        .with(user(keeperPrincipal())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/transfer-confirmations/destination/7"));
+
+        verify(confirmationService).confirmDestination(7L, 99L);
+    }
+
+    @Test
+    void destinationConfirmationRequiresCsrf() throws Exception {
+        mockMvc.perform(post("/transfer-confirmations/destination/7/confirm")
+                        .with(user(keeperPrincipal())))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?expired"));
+
+        verify(confirmationService, never()).confirmDestination(anyLong(), anyLong());
     }
 
     private AppUserPrincipal keeperPrincipal() {
