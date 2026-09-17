@@ -34,4 +34,9 @@ public class TransferLotAllocation {
         this.transferDetail = detail; this.inventoryLot = lot;
         this.allocatedQuantity = quantity; this.allocatedUnitPrice = unitPrice;
     }
+
+    public Long getId() { return id; }
+    public InventoryLot getInventoryLot() { return inventoryLot; }
+    public long getAllocatedQuantity() { return allocatedQuantity; }
+    public BigDecimal getAllocatedUnitPrice() { return allocatedUnitPrice; }
 }

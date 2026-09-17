@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${transfer.request.requestCode + ' | Điều chuyển kho'}">Điều chuyển kho</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a>
+    <form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form>
+</header>
+<main class="page-shell">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">UC-15</p>
+            <h1 th:text="${transfer.request.requestCode}">TRF_20260917_001</h1>
+            <p class="muted">Dữ liệu đề nghị và phân bổ FIFO chỉ đọc; submit không làm thay đổi tồn kho hoặc giữ chỗ.</p>
+        </div>
+        <a class="button-link button-secondary" th:href="@{/warehouse-transfers}">Danh sách điều chuyển</a>
+    </div>
+
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
+    <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}">Có lỗi</div>
+
+    <dl class="detail-grid">
+        <div><dt>Mã phiếu đề nghị</dt><dd th:text="${transfer.request.requestCode}">TRF_20260917_001</dd></div>
+        <div><dt>Trạng thái chứng từ</dt><dd><span class="status-pill" th:text="${transfer.status.displayName}">Lưu nháp</span></dd></div>
+        <div><dt>Loại phiếu</dt><dd th:text="${transfer.request.operationType.code + ' - ' + transfer.request.operationType.name}">Điều chuyển</dd></div>
+        <div><dt>Người đề nghị</dt><dd th:text="${transfer.request.createdBy.username + ' - ' + transfer.request.createdBy.fullName}">User</dd></div>
+        <div><dt>Kho nguồn</dt><dd th:text="${transfer.sourceWarehouse.warehouseCode + ' - ' + transfer.sourceWarehouse.warehouseName}">Kho nguồn</dd></div>
+        <div><dt>Kho nhận</dt><dd th:text="${transfer.destinationWarehouse.warehouseCode + ' - ' + transfer.destinationWarehouse.warehouseName}">Kho nhận</dd></div>
+        <div><dt>Lý do</dt><dd th:text="${transfer.request.reason.code + ' - ' + transfer.request.reason.name}">Lý do</dd></div>
+        <div class="detail-grid-wide"><dt>Ghi chú đề nghị</dt><dd th:text="${transfer.request.note == null ? 'Không có' : transfer.request.note}">Ghi chú</dd></div>
+    </dl>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Vật tư</th><th>ĐVT</th><th>Tình trạng</th><th>Số lượng</th><th>Phân bổ FIFO đã duyệt</th></tr></thead>
+            <tbody>
+            <tr th:each="detail : ${transfer.details}">
+                <td th:text="${detail.requestDetail.material.materialCode + ' - ' + detail.requestDetail.material.materialName}">Vật tư</td>
+                <td th:text="${detail.requestDetail.material.unit.displayName}">ĐVT</td>
+                <td th:text="${detail.requestDetail.condition.displayName}">Tình trạng</td>
+                <td th:text="${detail.requestDetail.quantity}">1</td>
+                <td>
+                    <ul class="allocation-list">
+                        <li th:each="allocation : ${detail.allocations}"
+                            th:text="${'Lô #' + allocation.inventoryLot.id + ' · Nhận ' + @businessDisplay.dateTime(allocation.inventoryLot.receivedAt) + ' · SL ' + allocation.allocatedQuantity + ' · Đơn giá ' + (allocation.allocatedUnitPrice == null ? '-' : allocation.allocatedUnitPrice)}">Lô</li>
+                    </ul>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form class="form-card transaction-submit-card" method="post"
+          th:if="${transfer.status.name() == 'DRAFT'}"
+          th:action="@{/warehouse-transfers/{id}/submit(id=${transfer.id})}">
+        <h2>Chuyển duyệt chứng từ điều chuyển</h2>
+        <p class="form-hint">Thao tác chỉ chuyển trạng thái sang chờ duyệt; tồn kho, giữ chỗ và phân bổ FIFO giữ nguyên.</p>
+        <div class="form-actions"><button type="submit">Chuyển duyệt</button></div>
+    </form>
+
+    <section class="form-card transaction-submit-card" th:unless="${transfer.status.name() == 'DRAFT'}">
+        <h2>Trạng thái xử lý</h2>
+        <p class="readonly-value" th:text="${transfer.status.displayName}">Chờ duyệt</p>
+    </section>
+</main>
+</body>
+</html>

@@ -66,8 +66,14 @@ public class WarehouseTransfer {
     }
     @PreUpdate void updateTimestamp() { updatedAt = Instant.now(); }
 
+    public void submit() { this.status = WarehouseTransferStatus.SUBMITTED; }
+
     public Long getId() { return id; }
     public WarehouseRequest getRequest() { return request; }
+    public Warehouse getSourceWarehouse() { return sourceWarehouse; }
+    public Warehouse getDestinationWarehouse() { return destinationWarehouse; }
     public WarehouseTransferStatus getStatus() { return status; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
     public List<WarehouseTransferDetail> getDetails() { return Collections.unmodifiableList(details); }
 }
