@@ -67,6 +67,8 @@ public class WarehouseTransfer {
     @PreUpdate void updateTimestamp() { updatedAt = Instant.now(); }
 
     public void submit() { this.status = WarehouseTransferStatus.SUBMITTED; }
+    public void approve() { this.status = WarehouseTransferStatus.READY_TO_TRANSFER; }
+    public void reject() { this.status = WarehouseTransferStatus.REJECTED; }
 
     public Long getId() { return id; }
     public WarehouseRequest getRequest() { return request; }
