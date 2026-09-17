@@ -89,6 +89,12 @@ public class PurchaseOrder {
         status = PurchaseOrderStatus.CANCELLED;
     }
 
+    public void registerReceipt(Instant receivedAt, boolean fullyReceived) {
+        if (firstReceivedAt == null) firstReceivedAt = receivedAt;
+        status = fullyReceived ? PurchaseOrderStatus.COMPLETED
+                : PurchaseOrderStatus.PARTIALLY_RECEIVED;
+    }
+
     @PrePersist
     void initializeTimestamps() {
         Instant now = Instant.now();

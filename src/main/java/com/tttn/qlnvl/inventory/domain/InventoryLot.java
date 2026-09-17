@@ -1,8 +1,10 @@
 package com.tttn.qlnvl.inventory.domain;
 
 import com.tttn.qlnvl.material.domain.Material;
+import com.tttn.qlnvl.purchaseorder.domain.PurchaseOrderItem;
 import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
+import com.tttn.qlnvl.warehousetransaction.domain.WarehouseTransactionDetail;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -39,14 +41,43 @@ public class InventoryLot {
     private BigDecimal unitPrice;
     @Column(name = "received_at", nullable = false, updatable = false)
     private Instant receivedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_po_item_id", updatable = false)
+    private PurchaseOrderItem sourcePurchaseOrderItem;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receipt_transaction_detail_id", unique = true, updatable = false)
+    private WarehouseTransactionDetail receiptTransactionDetail;
 
     protected InventoryLot() {}
+
+    public InventoryLot(Warehouse warehouse, Material material, MaterialCondition condition,
+            PurchaseOrderItem sourcePurchaseOrderItem,
+            WarehouseTransactionDetail receiptTransactionDetail, BigDecimal unitPrice,
+            long quantity, Instant receivedAt) {
+        if (quantity <= 0) throw new IllegalArgumentException("Invalid receipt quantity");
+        this.warehouse = warehouse;
+        this.material = material;
+        this.condition = condition;
+        this.sourcePurchaseOrderItem = sourcePurchaseOrderItem;
+        this.receiptTransactionDetail = receiptTransactionDetail;
+        this.unitPrice = unitPrice;
+        this.onHandQuantity = quantity;
+        this.reservedQuantity = 0;
+        this.receivedAt = receivedAt;
+    }
 
     public Long getId() { return id; }
     public BigDecimal getUnitPrice() { return unitPrice; }
     public long getOnHandQuantity() { return onHandQuantity; }
     public long getReservedQuantity() { return reservedQuantity; }
     public Instant getReceivedAt() { return receivedAt; }
+    public Warehouse getWarehouse() { return warehouse; }
+    public Material getMaterial() { return material; }
+    public MaterialCondition getCondition() { return condition; }
+    public PurchaseOrderItem getSourcePurchaseOrderItem() { return sourcePurchaseOrderItem; }
+    public WarehouseTransactionDetail getReceiptTransactionDetail() {
+        return receiptTransactionDetail;
+    }
 
     public void reserve(long quantity) {
         if (quantity <= 0 || quantity > onHandQuantity - reservedQuantity) {
@@ -59,6 +90,14 @@ public class InventoryLot {
         if (quantity <= 0 || quantity > reservedQuantity) {
             throw new IllegalArgumentException("Invalid lot reservation release quantity");
         }
+        reservedQuantity -= quantity;
+    }
+
+    public void issue(long quantity) {
+        if (quantity <= 0 || quantity > reservedQuantity || quantity > onHandQuantity) {
+            throw new IllegalArgumentException("Invalid lot issue quantity");
+        }
+        onHandQuantity -= quantity;
         reservedQuantity -= quantity;
     }
 }

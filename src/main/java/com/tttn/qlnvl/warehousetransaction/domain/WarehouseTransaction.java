@@ -1,5 +1,6 @@
 package com.tttn.qlnvl.warehousetransaction.domain;
 
+import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.warehouserequest.domain.OperationDirection;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
 import jakarta.persistence.CascadeType;
@@ -14,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -37,6 +39,14 @@ public class WarehouseTransaction {
     private WarehouseTransactionStatus status;
     @Column(name = "execution_note", length = 1000)
     private String executionNote;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "accounting_status", length = 30)
+    private AccountingStatus accountingStatus;
+    @Column(name = "physical_confirmed_at")
+    private Instant physicalConfirmedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "physical_confirmed_by_user_id")
+    private AppUser physicalConfirmedBy;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -70,12 +80,22 @@ public class WarehouseTransaction {
 
     public void approve() { this.status = WarehouseTransactionStatus.READY_FOR_CONFIRMATION; }
     public void reject() { this.status = WarehouseTransactionStatus.REJECTED; }
+    public void confirmPhysical(AppUser actor, Instant confirmedAt, boolean requiresAccounting) {
+        this.physicalConfirmedBy = actor;
+        this.physicalConfirmedAt = confirmedAt;
+        this.accountingStatus = requiresAccounting
+                ? AccountingStatus.PENDING : AccountingStatus.NOT_REQUIRED;
+        this.status = WarehouseTransactionStatus.COMPLETED;
+    }
 
     public Long getId() { return id; }
     public String getTransactionCode() { return transactionCode; }
     public WarehouseRequest getRequest() { return request; }
     public WarehouseTransactionStatus getStatus() { return status; }
     public String getExecutionNote() { return executionNote; }
+    public AccountingStatus getAccountingStatus() { return accountingStatus; }
+    public Instant getPhysicalConfirmedAt() { return physicalConfirmedAt; }
+    public AppUser getPhysicalConfirmedBy() { return physicalConfirmedBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<WarehouseTransactionDetail> getDetails() { return Collections.unmodifiableList(details); }
