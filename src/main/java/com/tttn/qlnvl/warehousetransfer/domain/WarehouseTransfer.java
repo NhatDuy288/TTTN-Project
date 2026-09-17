@@ -1,5 +1,6 @@
 package com.tttn.qlnvl.warehousetransfer.domain;
 
+import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouserequest.domain.OperationDirection;
 import com.tttn.qlnvl.warehouserequest.domain.WarehouseRequest;
@@ -41,6 +42,11 @@ public class WarehouseTransfer {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private WarehouseTransferStatus status;
+    @Column(name = "source_confirmed_at")
+    private Instant sourceConfirmedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_confirmed_by_user_id")
+    private AppUser sourceConfirmedBy;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -69,12 +75,19 @@ public class WarehouseTransfer {
     public void submit() { this.status = WarehouseTransferStatus.SUBMITTED; }
     public void approve() { this.status = WarehouseTransferStatus.READY_TO_TRANSFER; }
     public void reject() { this.status = WarehouseTransferStatus.REJECTED; }
+    public void confirmSource(AppUser actor, Instant confirmedAt) {
+        this.sourceConfirmedBy = actor;
+        this.sourceConfirmedAt = confirmedAt;
+        this.status = WarehouseTransferStatus.IN_TRANSIT;
+    }
 
     public Long getId() { return id; }
     public WarehouseRequest getRequest() { return request; }
     public Warehouse getSourceWarehouse() { return sourceWarehouse; }
     public Warehouse getDestinationWarehouse() { return destinationWarehouse; }
     public WarehouseTransferStatus getStatus() { return status; }
+    public Instant getSourceConfirmedAt() { return sourceConfirmedAt; }
+    public AppUser getSourceConfirmedBy() { return sourceConfirmedBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<WarehouseTransferDetail> getDetails() { return Collections.unmodifiableList(details); }

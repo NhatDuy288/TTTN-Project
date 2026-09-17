@@ -23,7 +23,8 @@ public interface WarehouseTransferRepository extends JpaRepository<WarehouseTran
 
     @EntityGraph(attributePaths = {
             "request", "request.operationType", "request.reason", "request.createdBy",
-            "sourceWarehouse", "destinationWarehouse", "details", "details.requestDetail",
+            "sourceWarehouse", "destinationWarehouse", "sourceConfirmedBy",
+            "details", "details.requestDetail",
             "details.requestDetail.material"
     })
     @Query("select distinct transfer from WarehouseTransfer transfer where transfer.id = :id")
