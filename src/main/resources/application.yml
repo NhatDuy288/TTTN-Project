@@ -29,3 +29,6 @@ logging:
 
 app:
   business-zone: ${BUSINESS_TIME_ZONE:Asia/Ho_Chi_Minh}
+
+inventory:
+  closing-cron: ${INVENTORY_CLOSING_CRON:0 0 22 * * *}
