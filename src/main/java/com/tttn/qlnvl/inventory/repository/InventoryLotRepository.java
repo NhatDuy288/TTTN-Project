@@ -6,12 +6,66 @@ import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
 import jakarta.persistence.LockModeType;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long> {
+    @EntityGraph(attributePaths = {"warehouse", "material", "material.materialGroup",
+            "sourcePurchaseOrderItem", "sourcePurchaseOrderItem.purchaseOrder"})
+    @Query(value = """
+            select lot from InventoryLot lot
+            where lot.warehouse.status = com.tttn.qlnvl.warehouse.domain.WarehouseStatus.ACTIVE
+              and lot.material.status = com.tttn.qlnvl.material.domain.MaterialStatus.ACTIVE
+              and lot.material.materialGroup.active = true
+              and (:warehouseId is null or lot.warehouse.id = :warehouseId)
+              and (:materialGroupId is null or lot.material.materialGroup.id = :materialGroupId)
+              and (:materialId is null or lot.material.id = :materialId)
+              and lot.condition in :conditions
+            order by lot.material.materialCode, lot.receivedAt, lot.id
+            """,
+            countQuery = """
+            select count(lot) from InventoryLot lot
+            where lot.warehouse.status = com.tttn.qlnvl.warehouse.domain.WarehouseStatus.ACTIVE
+              and lot.material.status = com.tttn.qlnvl.material.domain.MaterialStatus.ACTIVE
+              and lot.material.materialGroup.active = true
+              and (:warehouseId is null or lot.warehouse.id = :warehouseId)
+              and (:materialGroupId is null or lot.material.materialGroup.id = :materialGroupId)
+              and (:materialId is null or lot.material.id = :materialId)
+              and lot.condition in :conditions
+            """)
+    Page<InventoryLot> searchDetailedInventory(@Param("warehouseId") Long warehouseId,
+            @Param("materialGroupId") Long materialGroupId,
+            @Param("materialId") Long materialId,
+            @Param("conditions") List<MaterialCondition> conditions,
+            Pageable pageable);
+
+    @Query("""
+            select lot.warehouse as warehouse,
+                   lot.material as material,
+                   lot.condition as condition,
+                   sum(lot.onHandQuantity) as onHandQuantity,
+                   sum(lot.reservedQuantity) as lotReservedQuantity
+            from InventoryLot lot
+            where lot.warehouse.status = com.tttn.qlnvl.warehouse.domain.WarehouseStatus.ACTIVE
+              and lot.material.status = com.tttn.qlnvl.material.domain.MaterialStatus.ACTIVE
+              and lot.material.materialGroup.active = true
+              and (:warehouseId is null or lot.warehouse.id = :warehouseId)
+              and (:materialGroupId is null or lot.material.materialGroup.id = :materialGroupId)
+              and (:materialId is null or lot.material.id = :materialId)
+              and lot.condition in :conditions
+            group by lot.warehouse, lot.material, lot.condition
+            order by lot.material.materialCode, lot.warehouse.warehouseCode, lot.condition
+            """)
+    List<DetailedInventoryAggregate> aggregateDetailedInventory(
+            @Param("warehouseId") Long warehouseId,
+            @Param("materialGroupId") Long materialGroupId,
+            @Param("materialId") Long materialId,
+            @Param("conditions") List<MaterialCondition> conditions);
     @Query("""
             select lot.warehouse as warehouse,
                    lot.material as material,
@@ -53,6 +107,14 @@ public interface InventoryLotRepository extends JpaRepository<InventoryLot, Long
             @Param("condition") MaterialCondition condition);
 
     interface DailyLotAggregate {
+        Warehouse getWarehouse();
+        Material getMaterial();
+        MaterialCondition getCondition();
+        long getOnHandQuantity();
+        long getLotReservedQuantity();
+    }
+
+    interface DetailedInventoryAggregate {
         Warehouse getWarehouse();
         Material getMaterial();
         MaterialCondition getCondition();

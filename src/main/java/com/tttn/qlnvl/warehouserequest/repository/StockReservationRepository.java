@@ -19,6 +19,29 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
                    sum(reservation.quantity) as softReservedQuantity
             from StockReservation reservation
             where reservation.status = com.tttn.qlnvl.warehouserequest.domain.StockReservationStatus.ACTIVE_SOFT
+              and reservation.warehouse.status = com.tttn.qlnvl.warehouse.domain.WarehouseStatus.ACTIVE
+              and reservation.material.status = com.tttn.qlnvl.material.domain.MaterialStatus.ACTIVE
+              and reservation.material.materialGroup.active = true
+              and (:warehouseId is null or reservation.warehouse.id = :warehouseId)
+              and (:materialGroupId is null or reservation.material.materialGroup.id = :materialGroupId)
+              and (:materialId is null or reservation.material.id = :materialId)
+              and reservation.condition in :conditions
+            group by reservation.warehouse, reservation.material, reservation.condition
+            order by reservation.material.materialCode,
+                     reservation.warehouse.warehouseCode, reservation.condition
+            """)
+    List<DetailedInventorySoftAggregate> aggregateDetailedInventorySoftReservations(
+            @Param("warehouseId") Long warehouseId,
+            @Param("materialGroupId") Long materialGroupId,
+            @Param("materialId") Long materialId,
+            @Param("conditions") List<MaterialCondition> conditions);
+    @Query("""
+            select reservation.warehouse as warehouse,
+                   reservation.material as material,
+                   reservation.condition as condition,
+                   sum(reservation.quantity) as softReservedQuantity
+            from StockReservation reservation
+            where reservation.status = com.tttn.qlnvl.warehouserequest.domain.StockReservationStatus.ACTIVE_SOFT
             group by reservation.warehouse, reservation.material, reservation.condition
             """)
     List<DailySoftReservationAggregate> aggregateActiveSoftForDailySnapshot();
@@ -45,6 +68,13 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
             @Param("condition") MaterialCondition condition);
 
     interface DailySoftReservationAggregate {
+        Warehouse getWarehouse();
+        Material getMaterial();
+        MaterialCondition getCondition();
+        long getSoftReservedQuantity();
+    }
+
+    interface DetailedInventorySoftAggregate {
         Warehouse getWarehouse();
         Material getMaterial();
         MaterialCondition getCondition();
