@@ -7,6 +7,7 @@
     <div class="page-heading"><div><p class="eyebrow">UC-07 / UC-08 / UC-09</p><h1 th:text="${request.requestCode}">INP_20260915_001</h1><p class="muted">Chi tiết phiếu đề nghị kho của bạn.</p></div><a class="button-link button-secondary" th:href="@{/dashboard}">Tổng quan</a></div>
     <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
     <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}">Không thể chuyển duyệt</div>
+    <p><a class="button-link button-secondary" th:href="@{/workflow-history/REQUEST/{id}(id=${request.id})}">Lịch sử nghiệp vụ</a></p>
     <dl class="detail-grid">
         <div><dt>Loại phiếu</dt><dd th:text="${request.operationType.code + ' - ' + request.operationType.name}">Loại phiếu</dd></div>
         <div><dt>Trạng thái</dt><dd><span class="status-pill" th:text="${request.status.displayName}">Lưu nháp</span></dd></div>

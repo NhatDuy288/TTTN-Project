@@ -57,4 +57,11 @@ public class StatusHistory {
     void initializeChangedAt() {
         changedAt = Instant.now();
     }
+
+    public String getFromStatus() { return fromStatus; }
+    public String getToStatus() { return toStatus; }
+    public WorkflowAction getAction() { return action; }
+    public AppUser getChangedBy() { return changedBy; }
+    public String getComment() { return comment; }
+    public Instant getChangedAt() { return changedAt; }
 }

@@ -38,7 +38,6 @@ public class DashboardController {
         List<DashboardShortcut> shortcuts = new ArrayList<>();
         shortcuts.add(new DashboardShortcut("Tra cứu vật tư", "/materials"));
         shortcuts.add(new DashboardShortcut("Tra cứu kho", "/warehouses"));
-        shortcuts.add(new DashboardShortcut("Lịch sử nghiệp vụ", "/workflow-history"));
 
         switch (role) {
             case "REQUESTER" -> {

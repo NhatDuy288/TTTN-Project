@@ -24,6 +24,7 @@
     <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}">Thành công</div>
     <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}">Có lỗi</div>
 
+    <p><a class="button-link button-secondary" th:href="@{/workflow-history/TRANSACTION/{id}(id=${transaction.id})}">Lịch sử nghiệp vụ</a></p>
     <dl class="detail-grid">
         <div><dt>Mã phiếu đề nghị</dt><dd th:text="${transaction.request.requestCode}">INP_20260917_001</dd></div>
         <div><dt>Trạng thái chứng từ</dt><dd><span class="status-pill" th:text="${transaction.status.displayName}">Chờ duyệt</span></dd></div>

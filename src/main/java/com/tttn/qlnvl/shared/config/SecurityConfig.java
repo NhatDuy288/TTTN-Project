@@ -58,6 +58,9 @@ public class SecurityConfig {
                                 .hasAnyRole("INVENTORY_STAFF", "INVENTORY_APPROVER")
                         .requestMatchers("/reports/nxt", "/reports/stock-card")
                                 .hasAnyRole("INVENTORY_STAFF", "INVENTORY_APPROVER", "WAREHOUSE_KEEPER")
+                        .requestMatchers(HttpMethod.GET, "/workflow-history/*/*")
+                                .hasAnyRole("REQUESTER", "REQUEST_APPROVER", "INVENTORY_STAFF",
+                                        "INVENTORY_APPROVER", "WAREHOUSE_KEEPER")
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")

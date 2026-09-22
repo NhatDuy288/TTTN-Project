@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lịch sử nghiệp vụ</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"></head>
+<body>
+<header class="topbar"><a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a><form method="post" th:action="@{/logout}"><button class="button-secondary" type="submit">Đăng xuất</button></form></header>
+<main class="page-shell">
+    <div class="page-heading"><div><p class="eyebrow">UC-22</p><h1>Lịch sử nghiệp vụ</h1><p class="muted" th:text="${timeline.title}">Mã bản ghi</p></div><a class="button-link button-secondary" th:href="${timeline.backUrl}">Quay lại chi tiết</a></div>
+    <div class="table-wrap"><table><thead><tr><th>Thời điểm</th><th>Thao tác</th><th>Trạng thái trước</th><th>Trạng thái sau</th><th>Người thực hiện</th><th>Ghi chú</th></tr></thead><tbody>
+        <tr th:each="event : ${timeline.events}"><td th:text="${@businessDisplay.dateTime(event.changedAt)}">Thời điểm</td><td th:text="${event.action}">Thao tác</td><td th:text="${event.fromStatus == null ? '-' : event.fromStatus}">Trước</td><td th:text="${event.toStatus}">Sau</td><td th:text="${event.changedBy.fullName}">Người thực hiện</td><td th:text="${event.comment == null ? '-' : event.comment}">Ghi chú</td></tr>
+        <tr th:if="${timeline.events.empty}"><td class="empty-state" colspan="6">Chưa có lịch sử trạng thái được ghi.</td></tr>
+    </tbody></table></div>
+</main>
+</body>
+</html>
