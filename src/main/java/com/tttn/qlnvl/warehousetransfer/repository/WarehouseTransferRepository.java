@@ -1,5 +1,6 @@
 package com.tttn.qlnvl.warehousetransfer.repository;
 
+import com.tttn.qlnvl.inventory.repository.StockCardMovementProjection;
 import com.tttn.qlnvl.material.domain.Material;
 import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
@@ -72,6 +73,52 @@ public interface WarehouseTransferRepository extends JpaRepository<WarehouseTran
                      requestDetail.condition
             """)
     List<NxtTransferAggregate> aggregateNxtDestinationImports(
+            @Param("warehouseId") Long warehouseId,
+            @Param("materialGroupId") Long materialGroupId,
+            @Param("materialId") Long materialId,
+            @Param("conditions") List<MaterialCondition> conditions,
+            @Param("fromInclusive") Instant fromInclusive,
+            @Param("toExclusive") Instant toExclusive);
+
+    @Query("""
+            select transfer.sourceConfirmedAt as transactionDate,
+                   request.requestCode as documentCode,
+                   operationType.name as operationTypeName,
+                   warehouse.id as warehouseId,
+                   warehouse.warehouseCode as warehouseCode,
+                   warehouse.warehouseName as warehouseName,
+                   material.id as materialId,
+                   material.materialCode as materialCode,
+                   material.materialName as materialName,
+                   requestDetail.condition as condition,
+                   reason.name as reasonName,
+                   allocation.allocatedUnitPrice as unitPrice,
+                   allocation.allocatedQuantity as quantity,
+                   purchaseOrder.poCode as purchaseOrderCode,
+                   allocation.id as layerId
+            from TransferLotAllocation allocation
+            join allocation.transferDetail detail
+            join detail.transfer transfer
+            join detail.requestDetail requestDetail
+            join transfer.request request
+            join request.operationType operationType
+            join request.reason reason
+            join transfer.sourceWarehouse warehouse
+            join requestDetail.material material
+            join allocation.inventoryLot lot
+            left join lot.sourcePurchaseOrderItem poItem
+            left join poItem.purchaseOrder purchaseOrder
+            where transfer.status in (
+                    com.tttn.qlnvl.warehousetransfer.domain.WarehouseTransferStatus.IN_TRANSIT,
+                    com.tttn.qlnvl.warehousetransfer.domain.WarehouseTransferStatus.COMPLETED)
+              and warehouse.id = :warehouseId
+              and material.materialGroup.id = :materialGroupId
+              and (:materialId is null or material.id = :materialId)
+              and requestDetail.condition in :conditions
+              and transfer.sourceConfirmedAt >= :fromInclusive
+              and transfer.sourceConfirmedAt < :toExclusive
+            """)
+    List<StockCardMovementProjection> findStockCardTransferIssues(
             @Param("warehouseId") Long warehouseId,
             @Param("materialGroupId") Long materialGroupId,
             @Param("materialId") Long materialId,

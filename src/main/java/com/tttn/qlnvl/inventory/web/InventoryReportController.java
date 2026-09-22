@@ -6,6 +6,8 @@ import com.tttn.qlnvl.inventory.application.NxtReportService;
 import com.tttn.qlnvl.inventory.application.NxtReportService.InvalidSearchException;
 import com.tttn.qlnvl.inventory.application.NxtReportService.MissingOpeningException;
 import com.tttn.qlnvl.inventory.application.NxtReportService.NxtReport;
+import com.tttn.qlnvl.inventory.application.StockCardReportService;
+import com.tttn.qlnvl.inventory.application.StockCardReportService.StockCardReport;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
@@ -22,11 +24,14 @@ public class InventoryReportController {
 
     private final InventoryReportService reportService;
     private final NxtReportService nxtReportService;
+    private final StockCardReportService stockCardReportService;
 
     public InventoryReportController(InventoryReportService reportService,
-            NxtReportService nxtReportService) {
+            NxtReportService nxtReportService,
+            StockCardReportService stockCardReportService) {
         this.reportService = reportService;
         this.nxtReportService = nxtReportService;
+        this.stockCardReportService = stockCardReportService;
     }
 
     @GetMapping("/reports/detailed-inventory")
@@ -104,5 +109,58 @@ public class InventoryReportController {
             model.addAttribute("openingDate", exception.getOpeningDate());
         }
         return "reports/nxt";
+    }
+
+    @GetMapping("/reports/stock-card")
+    String stockCard(@RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) Long materialGroupId,
+            @RequestParam(required = false) Long materialId,
+            @RequestParam(required = false, name = "condition")
+                    List<MaterialCondition> conditions,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model, HttpServletResponse response) {
+        boolean searched = warehouseId != null || materialGroupId != null || materialId != null
+                || (conditions != null && !conditions.isEmpty())
+                || fromDate != null || toDate != null;
+        LocalDate selectedFromDate = fromDate == null
+                ? stockCardReportService.defaultFromDate() : fromDate;
+        LocalDate selectedToDate = toDate == null
+                ? stockCardReportService.defaultToDate() : toDate;
+
+        model.addAttribute("warehouses", stockCardReportService.warehouses());
+        model.addAttribute("materialGroups", stockCardReportService.materialGroups());
+        model.addAttribute("materials", stockCardReportService.materials());
+        model.addAttribute("conditions", MaterialCondition.values());
+        model.addAttribute("pageSizes", PAGE_SIZES);
+        model.addAttribute("warehouseId", warehouseId);
+        model.addAttribute("materialGroupId", materialGroupId);
+        model.addAttribute("materialId", materialId);
+        model.addAttribute("selectedConditions", conditions == null ? List.of() : conditions);
+        model.addAttribute("fromDate", selectedFromDate);
+        model.addAttribute("toDate", selectedToDate);
+        model.addAttribute("selectedSize", PAGE_SIZES.contains(size) ? size : 20);
+        model.addAttribute("searched", searched);
+
+        if (!searched) {
+            return "reports/stock-card";
+        }
+        try {
+            StockCardReport report = stockCardReportService.report(warehouseId,
+                    materialGroupId, materialId, conditions, selectedFromDate,
+                    selectedToDate, page, size);
+            model.addAttribute("openingRows", report.openings());
+            model.addAttribute("stockCardPage", report.movements());
+            model.addAttribute("openingDate", report.openingDate());
+        } catch (StockCardReportService.InvalidSearchException exception) {
+            model.addAttribute("queryError", exception.getMessage());
+        } catch (StockCardReportService.MissingOpeningException exception) {
+            response.setStatus(HttpStatus.UNPROCESSABLE_ENTITY.value());
+            model.addAttribute("openingError", exception.getMessage());
+            model.addAttribute("openingDate", exception.getOpeningDate());
+        }
+        return "reports/stock-card";
     }
 }

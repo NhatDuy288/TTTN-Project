@@ -1,5 +1,6 @@
 package com.tttn.qlnvl.warehousetransaction.repository;
 
+import com.tttn.qlnvl.inventory.repository.StockCardMovementProjection;
 import com.tttn.qlnvl.material.domain.Material;
 import com.tttn.qlnvl.warehouse.domain.Warehouse;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
@@ -76,6 +77,51 @@ public interface WarehouseTransactionRepository extends JpaRepository<WarehouseT
                      requestDetail.condition
             """)
     List<NxtTransactionAggregate> aggregateNxtExports(
+            @Param("warehouseId") Long warehouseId,
+            @Param("materialGroupId") Long materialGroupId,
+            @Param("materialId") Long materialId,
+            @Param("conditions") List<MaterialCondition> conditions,
+            @Param("fromInclusive") Instant fromInclusive,
+            @Param("toExclusive") Instant toExclusive);
+
+    @Query("""
+            select transaction.physicalConfirmedAt as transactionDate,
+                   transaction.transactionCode as documentCode,
+                   operationType.name as operationTypeName,
+                   warehouse.id as warehouseId,
+                   warehouse.warehouseCode as warehouseCode,
+                   warehouse.warehouseName as warehouseName,
+                   material.id as materialId,
+                   material.materialCode as materialCode,
+                   material.materialName as materialName,
+                   requestDetail.condition as condition,
+                   reason.name as reasonName,
+                   allocation.allocatedUnitPrice as unitPrice,
+                   allocation.allocatedQuantity as quantity,
+                   purchaseOrder.poCode as purchaseOrderCode,
+                   allocation.id as layerId
+            from IssueLotAllocation allocation
+            join allocation.transactionDetail detail
+            join detail.transaction transaction
+            join detail.requestDetail requestDetail
+            join transaction.request request
+            join request.operationType operationType
+            join request.reason reason
+            join request.sourceWarehouse warehouse
+            join requestDetail.material material
+            join allocation.inventoryLot lot
+            left join lot.sourcePurchaseOrderItem poItem
+            left join poItem.purchaseOrder purchaseOrder
+            where transaction.status = com.tttn.qlnvl.warehousetransaction.domain.WarehouseTransactionStatus.COMPLETED
+              and operationType.direction = com.tttn.qlnvl.warehouserequest.domain.OperationDirection.EXPORT
+              and warehouse.id = :warehouseId
+              and material.materialGroup.id = :materialGroupId
+              and (:materialId is null or material.id = :materialId)
+              and requestDetail.condition in :conditions
+              and transaction.physicalConfirmedAt >= :fromInclusive
+              and transaction.physicalConfirmedAt < :toExclusive
+            """)
+    List<StockCardMovementProjection> findStockCardIssues(
             @Param("warehouseId") Long warehouseId,
             @Param("materialGroupId") Long materialGroupId,
             @Param("materialId") Long materialId,

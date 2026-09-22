@@ -18,6 +18,8 @@ import com.tttn.qlnvl.inventory.application.InventoryReportService.DetailedInven
 import com.tttn.qlnvl.inventory.application.NxtReportService;
 import com.tttn.qlnvl.inventory.application.NxtReportService.MissingOpeningException;
 import com.tttn.qlnvl.inventory.application.NxtReportService.NxtReport;
+import com.tttn.qlnvl.inventory.application.StockCardReportService;
+import com.tttn.qlnvl.inventory.application.StockCardReportService.StockCardReport;
 import com.tttn.qlnvl.shared.config.SecurityConfig;
 import com.tttn.qlnvl.shared.web.BusinessDisplayFormatter;
 import com.tttn.qlnvl.warehouserequest.domain.MaterialCondition;
@@ -44,6 +46,9 @@ class InventoryReportControllerTest {
     @MockitoBean
     private NxtReportService nxtReportService;
 
+    @MockitoBean
+    private StockCardReportService stockCardReportService;
+
     @BeforeEach
     void setUp() {
         when(reportService.detailedInventory(any(), any(), any(), any(), anyInt(), anyInt()))
@@ -56,6 +61,11 @@ class InventoryReportControllerTest {
         when(nxtReportService.warehouses()).thenReturn(List.of());
         when(nxtReportService.materialGroups()).thenReturn(List.of());
         when(nxtReportService.materials()).thenReturn(List.of());
+        when(stockCardReportService.defaultFromDate()).thenReturn(LocalDate.of(2026, 9, 1));
+        when(stockCardReportService.defaultToDate()).thenReturn(LocalDate.of(2026, 9, 8));
+        when(stockCardReportService.warehouses()).thenReturn(List.of());
+        when(stockCardReportService.materialGroups()).thenReturn(List.of());
+        when(stockCardReportService.materials()).thenReturn(List.of());
     }
 
     @Test
@@ -129,6 +139,50 @@ class InventoryReportControllerTest {
     @Test
     void requesterCannotViewNxt() throws Exception {
         mockMvc.perform(get("/reports/nxt")
+                        .with(user("requester").roles("REQUESTER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void warehouseKeeperCanRenderStockCard() throws Exception {
+        when(stockCardReportService.report(eq(11L), eq(12L), eq(null), any(),
+                eq(LocalDate.of(2026, 9, 1)), eq(LocalDate.of(2026, 9, 8)),
+                eq(0), eq(20))).thenReturn(new StockCardReport(List.of(),
+                        new PageImpl<>(List.of()), LocalDate.of(2026, 8, 31)));
+
+        mockMvc.perform(get("/reports/stock-card")
+                        .param("warehouseId", "11")
+                        .param("materialGroupId", "12")
+                        .param("fromDate", "2026-09-01")
+                        .param("toDate", "2026-09-08")
+                        .with(user("keeper").roles("WAREHOUSE_KEEPER")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("reports/stock-card"))
+                .andExpect(model().attributeExists("stockCardPage"))
+                .andExpect(content().string(containsString("Giao dịch kho")));
+    }
+
+    @Test
+    void stockCardMissingOpeningReturns422WithoutPartialRows() throws Exception {
+        when(stockCardReportService.report(eq(11L), eq(12L), eq(null), any(),
+                eq(LocalDate.of(2026, 9, 1)), eq(LocalDate.of(2026, 9, 8)),
+                eq(0), eq(20))).thenThrow(new StockCardReportService.MissingOpeningException(
+                        LocalDate.of(2026, 8, 31)));
+
+        mockMvc.perform(get("/reports/stock-card")
+                        .param("warehouseId", "11")
+                        .param("materialGroupId", "12")
+                        .param("fromDate", "2026-09-01")
+                        .param("toDate", "2026-09-08")
+                        .with(user("staff").roles("INVENTORY_STAFF")))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(model().attributeExists("openingError"))
+                .andExpect(model().attributeDoesNotExist("stockCardPage"));
+    }
+
+    @Test
+    void requesterCannotViewStockCard() throws Exception {
+        mockMvc.perform(get("/reports/stock-card")
                         .with(user("requester").roles("REQUESTER")))
                 .andExpect(status().isForbidden());
     }
