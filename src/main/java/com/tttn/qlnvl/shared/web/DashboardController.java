@@ -55,11 +55,13 @@ public class DashboardController {
                 shortcuts.add(new DashboardShortcut("Chứng từ nhập xuất", "/warehouse-transactions"));
                 shortcuts.add(new DashboardShortcut("Điều chuyển kho", "/warehouse-transfers"));
                 shortcuts.add(new DashboardShortcut("Báo cáo tồn kho", "/reports/detailed-inventory"));
+                shortcuts.add(new DashboardShortcut("Nhập xuất tồn", "/reports/nxt"));
             }
             case "INVENTORY_APPROVER" -> {
                 shortcuts.add(new DashboardShortcut("Duyệt nhập xuất", "/transaction-approvals"));
                 shortcuts.add(new DashboardShortcut("Duyệt điều chuyển", "/transfer-approvals"));
                 shortcuts.add(new DashboardShortcut("Báo cáo tồn kho", "/reports/detailed-inventory"));
+                shortcuts.add(new DashboardShortcut("Nhập xuất tồn", "/reports/nxt"));
             }
             case "WAREHOUSE_KEEPER" -> {
                 shortcuts.add(new DashboardShortcut("Quản lý kho", "/warehouses"));

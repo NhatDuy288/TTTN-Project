@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Báo cáo Nhập – Xuất – Tồn | Quản lý kho vật tư</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand-link" th:href="@{/dashboard}">Quản lý kho vật tư</a>
+    <form method="post" th:action="@{/logout}">
+        <button class="button-secondary" type="submit">Đăng xuất</button>
+    </form>
+</header>
+<main class="page-shell report-shell">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">UC-20</p>
+            <h1>Báo cáo Nhập – Xuất – Tồn</h1>
+            <p class="muted">Tồn đầu kỳ, nhập, xuất và tồn cuối kỳ theo số lượng.</p>
+        </div>
+    </div>
+
+    <form class="filter-panel report-filter-panel" method="get" th:action="@{/reports/nxt}">
+        <div>
+            <label for="warehouseId">Kho *</label>
+            <select id="warehouseId" name="warehouseId" required>
+                <option value="">Chọn kho</option>
+                <option th:each="warehouse : ${warehouses}" th:value="${warehouse.id}"
+                        th:selected="${warehouse.id == warehouseId}"
+                        th:text="${warehouse.warehouseCode + ' - ' + warehouse.warehouseName}">Kho</option>
+            </select>
+        </div>
+        <div>
+            <label for="materialGroupId">Nhóm vật tư</label>
+            <select id="materialGroupId" name="materialGroupId">
+                <option value="">Tất cả</option>
+                <option th:each="group : ${materialGroups}" th:value="${group.id}"
+                        th:selected="${group.id == materialGroupId}"
+                        th:text="${group.code + ' - ' + group.name}">Nhóm</option>
+            </select>
+        </div>
+        <div>
+            <label for="materialId">Vật tư</label>
+            <select id="materialId" name="materialId">
+                <option value="">Tất cả</option>
+                <option th:each="material : ${materials}" th:value="${material.id}"
+                        th:attr="data-group-id=${material.materialGroup.id}"
+                        th:selected="${material.id == materialId}"
+                        th:text="${material.materialCode + ' - ' + material.materialName}">Vật tư</option>
+            </select>
+        </div>
+        <div>
+            <label for="condition">Tình trạng</label>
+            <select id="condition" name="condition" multiple size="4">
+                <option th:each="item : ${conditions}" th:value="${item}"
+                        th:selected="${selectedConditions.contains(item)}"
+                        th:text="${item.displayName}">Mới</option>
+            </select>
+            <p class="form-hint">Không chọn nghĩa là tất cả.</p>
+        </div>
+        <div>
+            <label for="fromDate">Từ ngày *</label>
+            <input id="fromDate" name="fromDate" type="date" th:value="${fromDate}" required>
+        </div>
+        <div>
+            <label for="toDate">Đến ngày *</label>
+            <input id="toDate" name="toDate" type="date" th:value="${toDate}" required>
+        </div>
+        <div>
+            <label for="size">Số dòng</label>
+            <select id="size" name="size">
+                <option th:each="item : ${pageSizes}" th:value="${item}"
+                        th:selected="${item == selectedSize}" th:text="${item}">20</option>
+            </select>
+        </div>
+        <button type="submit">Tìm kiếm</button>
+    </form>
+
+    <p class="form-error" role="alert" th:if="${queryError}" th:text="${queryError}">Điều kiện truy vấn không hợp lệ.</p>
+    <p class="form-error" role="alert" th:if="${openingError}" th:text="${openingError}">Thiếu dữ liệu tồn đầu kỳ.</p>
+
+    <section th:if="${nxtPage != null}" aria-labelledby="nxt-heading">
+        <div class="section-heading">
+            <div>
+                <h2 id="nxt-heading">Kết quả Nhập – Xuất – Tồn</h2>
+                <p class="muted" th:text="${'Tồn đầu kỳ lấy từ kết kho ngày ' + openingDate}">Tồn đầu kỳ</p>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Kho</th><th>Nhóm vật tư</th><th>Mã vật tư</th><th>Tên vật tư</th>
+                    <th>ĐVT</th><th>Tình trạng</th><th>Tồn đầu</th><th>Nhập</th><th>Xuất</th><th>Tồn cuối</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${nxtPage.content}">
+                    <td th:text="${row.warehouseCode + ' - ' + row.warehouseName}">Kho</td>
+                    <td th:text="${row.materialGroupCode + ' - ' + row.materialGroupName}">Nhóm</td>
+                    <td th:text="${row.materialCode}">MAT-001</td>
+                    <td th:text="${row.materialName}">Vật tư</td>
+                    <td th:text="${row.unit.displayName}">Cái</td>
+                    <td th:text="${row.condition.displayName}">Mới</td>
+                    <td class="number-cell" th:text="${row.openingQuantity}">0</td>
+                    <td class="number-cell" th:text="${row.importQuantity}">0</td>
+                    <td class="number-cell" th:text="${row.exportQuantity}">0</td>
+                    <td class="number-cell" th:text="${row.closingQuantity}">0</td>
+                </tr>
+                <tr th:if="${nxtPage.empty}">
+                    <td colspan="10" class="empty-state">Không có dữ liệu phù hợp.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <nav class="pagination" th:if="${nxtPage.totalPages > 1}" aria-label="Phân trang báo cáo">
+            <a th:if="${nxtPage.hasPrevious()}"
+               th:href="@{/reports/nxt(warehouseId=${warehouseId},materialGroupId=${materialGroupId},materialId=${materialId},condition=${selectedConditions},fromDate=${fromDate},toDate=${toDate},page=${nxtPage.number - 1},size=${selectedSize})}">Trang trước</a>
+            <span th:text="${'Trang ' + (nxtPage.number + 1) + ' / ' + nxtPage.totalPages}">Trang 1</span>
+            <a th:if="${nxtPage.hasNext()}"
+               th:href="@{/reports/nxt(warehouseId=${warehouseId},materialGroupId=${materialGroupId},materialId=${materialId},condition=${selectedConditions},fromDate=${fromDate},toDate=${toDate},page=${nxtPage.number + 1},size=${selectedSize})}">Trang sau</a>
+        </nav>
+    </section>
+</main>
+<script>
+(() => {
+    const groupSelect = document.getElementById('materialGroupId');
+    const materialSelect = document.getElementById('materialId');
+    const options = Array.from(materialSelect.options).slice(1);
+    const applyGroupFilter = () => {
+        const groupId = groupSelect.value;
+        options.forEach(option => option.hidden = groupId !== '' && option.dataset.groupId !== groupId);
+        const selected = materialSelect.selectedOptions[0];
+        if (selected && selected.hidden) materialSelect.value = '';
+    };
+    groupSelect.addEventListener('change', applyGroupFilter);
+    applyGroupFilter();
+})();
+</script>
+</body>
+</html>

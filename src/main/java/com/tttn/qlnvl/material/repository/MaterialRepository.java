@@ -18,6 +18,9 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     List<Material> findByStatusOrderByMaterialCodeAsc(MaterialStatus status);
 
     @EntityGraph(attributePaths = "materialGroup")
+    List<Material> findAllByOrderByMaterialCodeAsc();
+
+    @EntityGraph(attributePaths = "materialGroup")
     @Query("select m from Material m where m.id in :ids")
     List<Material> findDetailedByIdIn(@Param("ids") List<Long> ids);
 

@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
+    List<Warehouse> findAllByOrderByWarehouseCodeAsc();
     List<Warehouse> findByStatusOrderByWarehouseCodeAsc(WarehouseStatus status);
 
     @EntityGraph(attributePaths = "updatedBy")
