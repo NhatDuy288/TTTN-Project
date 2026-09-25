@@ -14,8 +14,6 @@ import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.auth.domain.Role;
 import com.tttn.qlnvl.auth.repository.AppUserRepository;
 import com.tttn.qlnvl.material.domain.Material;
-import com.tttn.qlnvl.material.domain.MaterialGroup;
-import com.tttn.qlnvl.material.domain.MaterialUnit;
 import com.tttn.qlnvl.material.repository.MaterialGroupRepository;
 import com.tttn.qlnvl.material.repository.MaterialRepository;
 import com.tttn.qlnvl.shared.audit.AggregateType;
@@ -43,33 +41,19 @@ import com.tttn.qlnvl.warehousetransfer.application.WarehouseTransferService;
 import com.tttn.qlnvl.warehousetransfer.domain.WarehouseTransferStatus;
 import com.tttn.qlnvl.warehousetransfer.repository.WarehouseTransferRepository;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers
-class WarehouseRequestFlowIT {
-    @Container
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("tttn_integration");
-
-    @DynamicPropertySource
-    static void databaseProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-    }
-
+@Transactional
+class WarehouseRequestFlowIT extends PostgreSqlIntegrationTestBase {
     @Autowired private AppUserRepository users;
     @Autowired private WarehouseRepository warehouses;
     @Autowired private MaterialGroupRepository groups;
@@ -88,15 +72,19 @@ class WarehouseRequestFlowIT {
     @Autowired private TransferConfirmationService transferConfirmations;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MockMvc mvc;
+    private IntegrationFixtureFactory fixtures;
+
+    @BeforeEach
+    void setUpFixtureFactory() {
+        fixtures = new IntegrationFixtureFactory(users, warehouses, groups, materials);
+    }
 
     @Test
     void requesterCanOpenUnfilteredOwnRequestListOnPostgreSql() throws Exception {
-        AppUser owner = users.saveAndFlush(new AppUser(
-                "it_list_owner", "unused", "List Owner", Role.REQUESTER));
-        AppUser other = users.saveAndFlush(new AppUser(
-                "it_list_other", "unused", "List Other", Role.REQUESTER));
-        Warehouse destination = warehouses.saveAndFlush(new Warehouse(
-                "KHO_IT_05", "IT Warehouse Five", "Integration test warehouse address", null, owner));
+        String key = fixtures.nextKey("list");
+        AppUser owner = fixtures.user(key, "owner", Role.REQUESTER, "unused");
+        AppUser other = fixtures.user(key, "other", Role.REQUESTER, "unused");
+        Warehouse destination = fixtures.warehouse(key, "LIST", owner);
         Long operationId = jdbc.queryForObject(
                 "select id from operation_type where code = 'IMP_OTHER'", Long.class);
         Long reasonId = jdbc.queryForObject(
@@ -114,21 +102,17 @@ class WarehouseRequestFlowIT {
 
     @Test
     void importExportAndTransferPreserveStockAndAuditAcrossModules() throws Exception {
-        AppUser requester = users.saveAndFlush(new AppUser(
-                "it_import_requester", "unused", "Import Requester", Role.REQUESTER));
-        AppUser requestApprover = users.saveAndFlush(new AppUser(
-                "it_request_approver", "unused", "Request Approver", Role.REQUEST_APPROVER));
-        AppUser inventoryStaff = users.saveAndFlush(new AppUser(
-                "it_inventory_staff", "unused", "Inventory Staff", Role.INVENTORY_STAFF));
-        AppUser inventoryApprover = users.saveAndFlush(new AppUser(
-                "it_inventory_approver", "unused", "Inventory Approver", Role.INVENTORY_APPROVER));
-        AppUser keeper = users.saveAndFlush(new AppUser(
-                "it_keeper", "unused", "Warehouse Keeper", Role.WAREHOUSE_KEEPER));
-        Warehouse destination = warehouses.saveAndFlush(new Warehouse(
-                "KHO_IT_03", "IT Warehouse Three", "Integration test warehouse address", null, requester));
-        MaterialGroup group = groups.findByCode("CARD-VL-KHAC").orElseThrow();
-        Material material = materials.saveAndFlush(new Material(
-                "IT_MAT_002", "Integration Receipt Material", group, MaterialUnit.CAI, null));
+        String key = fixtures.nextKey("flow");
+        AppUser requester = fixtures.user(key, "requester", Role.REQUESTER, "unused");
+        AppUser requestApprover = fixtures.user(
+                key, "request_approver", Role.REQUEST_APPROVER, "unused");
+        AppUser inventoryStaff = fixtures.user(
+                key, "inventory_staff", Role.INVENTORY_STAFF, "unused");
+        AppUser inventoryApprover = fixtures.user(
+                key, "inventory_approver", Role.INVENTORY_APPROVER, "unused");
+        AppUser keeper = fixtures.user(key, "keeper", Role.WAREHOUSE_KEEPER, "unused");
+        Warehouse destination = fixtures.warehouse(key, "PRIMARY", requester);
+        Material material = fixtures.material(key, "Receipt Material");
         Long operationId = jdbc.queryForObject(
                 "select id from operation_type where code = 'IMP_OTHER'", Long.class);
         Long reasonId = jdbc.queryForObject(
@@ -202,8 +186,7 @@ class WarehouseRequestFlowIT {
                 .containsExactly(WorkflowAction.SUBMIT, WorkflowAction.APPROVE,
                         WorkflowAction.CONFIRM_PHYSICAL);
 
-        Warehouse transferDestination = warehouses.saveAndFlush(new Warehouse(
-                "KHO_IT_04", "IT Warehouse Four", "Integration test warehouse address", null, requester));
+        Warehouse transferDestination = fixtures.warehouse(key, "TRANSFER", requester);
         Long transferOperationId = jdbc.queryForObject(
                 "select id from operation_type where code = 'WWT'", Long.class);
         Long transferReasonId = jdbc.queryForObject(
@@ -249,13 +232,10 @@ class WarehouseRequestFlowIT {
 
     @Test
     void submittedImportCancellationPersistsBothTransitions() throws Exception {
-        AppUser owner = users.saveAndFlush(new AppUser(
-                "it_submit_owner", "unused", "Submit Owner", Role.REQUESTER));
-        Warehouse destination = warehouses.saveAndFlush(new Warehouse(
-                "KHO_IT_02", "IT Warehouse Two", "Integration test warehouse address", null, owner));
-        MaterialGroup group = groups.findByCode("CARD-VL-KHAC").orElseThrow();
-        Material material = materials.saveAndFlush(new Material(
-                "IT_MAT_001", "Integration Material", group, MaterialUnit.CAI, null));
+        String key = fixtures.nextKey("submitted");
+        AppUser owner = fixtures.user(key, "owner", Role.REQUESTER, "unused");
+        Warehouse destination = fixtures.warehouse(key, "SUBMITTED", owner);
+        Material material = fixtures.material(key, "Submitted Material");
         Long operationId = jdbc.queryForObject(
                 "select id from operation_type where code = 'IMP_OTHER'", Long.class);
         Long reasonId = jdbc.queryForObject(
@@ -288,10 +268,10 @@ class WarehouseRequestFlowIT {
 
     @Test
     void draftCancellationPersistsOneEventAndEnforcesOwnership() throws Exception {
-        AppUser owner = users.saveAndFlush(new AppUser("it_owner", "unused", "IT Owner", Role.REQUESTER));
-        AppUser other = users.saveAndFlush(new AppUser("it_other", "unused", "IT Other", Role.REQUESTER));
-        Warehouse destination = warehouses.saveAndFlush(
-                new Warehouse("KHO_IT_01", "IT Warehouse", "Integration test warehouse address", null, owner));
+        String key = fixtures.nextKey("draft");
+        AppUser owner = fixtures.user(key, "owner", Role.REQUESTER, "unused");
+        AppUser other = fixtures.user(key, "other", Role.REQUESTER, "unused");
+        Warehouse destination = fixtures.warehouse(key, "DRAFT", owner);
         Long operationId = jdbc.queryForObject(
                 "select id from operation_type where code = 'IMP_OTHER'", Long.class);
         Long reasonId = jdbc.queryForObject(
@@ -322,7 +302,7 @@ class WarehouseRequestFlowIT {
         mvc.perform(get(path).with(user(AppUserPrincipal.from(owner))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("CANCEL")))
-                .andExpect(content().string(containsString("IT Owner")));
+                .andExpect(content().string(containsString(owner.getFullName())));
         assertThatThrownBy(() -> requestService.cancel(requestId, owner.getId()))
                 .isInstanceOf(WarehouseRequestConflictException.class);
         assertThat(history.findByAggregateTypeAndAggregateIdOrderByChangedAtAscIdAsc(

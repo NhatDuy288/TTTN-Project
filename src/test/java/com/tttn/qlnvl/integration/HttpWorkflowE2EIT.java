@@ -15,7 +15,6 @@ import com.tttn.qlnvl.auth.domain.AppUser;
 import com.tttn.qlnvl.auth.domain.Role;
 import com.tttn.qlnvl.auth.repository.AppUserRepository;
 import com.tttn.qlnvl.material.domain.Material;
-import com.tttn.qlnvl.material.domain.MaterialUnit;
 import com.tttn.qlnvl.material.repository.MaterialGroupRepository;
 import com.tttn.qlnvl.material.repository.MaterialRepository;
 import com.tttn.qlnvl.shared.audit.AggregateType;
@@ -30,7 +29,6 @@ import com.tttn.qlnvl.warehousetransaction.domain.WarehouseTransactionStatus;
 import com.tttn.qlnvl.warehousetransaction.repository.WarehouseTransactionRepository;
 import com.tttn.qlnvl.warehousetransfer.domain.WarehouseTransferStatus;
 import com.tttn.qlnvl.warehousetransfer.repository.WarehouseTransferRepository;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,31 +37,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers
-class HttpWorkflowE2EIT {
+@Transactional
+class HttpWorkflowE2EIT extends PostgreSqlIntegrationTestBase {
     private static final String PASSWORD = "http-e2e-password";
-    private static final AtomicInteger SEQUENCE = new AtomicInteger();
-
-    @Container
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("tttn_http_e2e");
-
-    @DynamicPropertySource
-    static void databaseProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-    }
 
     @Autowired AppUserRepository users;
     @Autowired WarehouseRepository warehouses;
@@ -78,6 +60,7 @@ class HttpWorkflowE2EIT {
     @Autowired MockMvc mvc;
 
     String key;
+    IntegrationFixtureFactory fixtures;
     Sessions sessions;
     Warehouse source;
     Warehouse destination;
@@ -85,7 +68,8 @@ class HttpWorkflowE2EIT {
 
     @BeforeEach
     void setUpIsolatedFixture() throws Exception {
-        key = "%02d".formatted(SEQUENCE.incrementAndGet());
+        fixtures = new IntegrationFixtureFactory(users, warehouses, groups, materials);
+        key = fixtures.nextKey("http");
         AppUser requester = user("requester", Role.REQUESTER);
         AppUser other = user("other", Role.REQUESTER);
         AppUser requestApprover = user("request-approver", Role.REQUEST_APPROVER);
@@ -94,12 +78,9 @@ class HttpWorkflowE2EIT {
         AppUser keeper = user("keeper", Role.WAREHOUSE_KEEPER);
         sessions = new Sessions(login(requester), login(other), login(requestApprover),
                 login(staff), login(inventoryApprover), login(keeper));
-        source = warehouses.saveAndFlush(new Warehouse("E2E_SRC_" + key, "E2E Source " + key,
-                "HTTP integration source", null, keeper));
-        destination = warehouses.saveAndFlush(new Warehouse("E2E_DST_" + key,
-                "E2E Destination " + key, "HTTP integration destination", null, keeper));
-        material = materials.saveAndFlush(new Material("E2E_MAT_" + key, "E2E Material " + key,
-                groups.findByCode("CARD-VL-KHAC").orElseThrow(), MaterialUnit.CAI, null));
+        source = fixtures.warehouse(key, "SOURCE", keeper);
+        destination = fixtures.warehouse(key, "DESTINATION", keeper);
+        material = fixtures.material(key, "HTTP E2E Material");
     }
 
     @Test
@@ -227,8 +208,7 @@ class HttpWorkflowE2EIT {
     }
 
     AppUser user(String label, Role role) {
-        return users.saveAndFlush(new AppUser("e2e_" + key + "_" + label,
-                encoder.encode(PASSWORD), "HTTP E2E " + label, role));
+        return fixtures.user(key, label, role, encoder.encode(PASSWORD));
     }
 
     MockHttpSession login(AppUser user) throws Exception {
