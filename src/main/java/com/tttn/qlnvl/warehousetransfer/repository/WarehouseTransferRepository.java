@@ -19,6 +19,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WarehouseTransferRepository extends JpaRepository<WarehouseTransfer, Long> {
+    Optional<WarehouseTransfer> findByRequestId(Long requestId);
+
     @EntityGraph(attributePaths = {
             "request", "request.operationType", "request.createdBy",
             "sourceWarehouse", "destinationWarehouse", "sourceConfirmedBy",

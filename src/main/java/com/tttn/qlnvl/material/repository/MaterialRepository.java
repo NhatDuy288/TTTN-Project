@@ -47,6 +47,7 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     Optional<Material> findByIdForUpdate(@Param("id") Long id);
 
     boolean existsByMaterialCode(String materialCode);
+    Optional<Material> findByMaterialCode(String materialCode);
     boolean existsByGlCodeAndStatus(String glCode, MaterialStatus status);
     boolean existsByGlCodeAndStatusAndIdNot(String glCode, MaterialStatus status, Long id);
 

@@ -19,8 +19,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WarehouseTransactionRepository extends JpaRepository<WarehouseTransaction, Long> {
+    Optional<WarehouseTransaction> findByRequestId(Long requestId);
+
     @EntityGraph(attributePaths = {
-            "request", "request.operationType", "request.createdBy"
+            "request", "request.operationType", "request.createdBy",
+            "request.sourceWarehouse", "request.destinationWarehouse"
     })
     @Query("select transaction from WarehouseTransaction transaction where transaction.status = :status")
     Page<WarehouseTransaction> findQueue(@Param("status") WarehouseTransactionStatus status,

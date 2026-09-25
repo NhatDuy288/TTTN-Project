@@ -43,6 +43,8 @@ Khi profile `demo` được bật, ứng dụng tạo các tài khoản còn thi
 
 Tất cả dùng mật khẩu lấy từ `DEMO_USER_PASSWORD` trong `.env`; mật khẩu thật không được commit.
 
+Profile `demo` đồng thời tạo một lần bộ dữ liệu workflow idempotent: hai kho demo, tồn kho có provenance từ một phiếu nhập hoàn tất, Request ở DRAFT/SUBMITTED/PROCESSING/COMPLETED, Receipt/Issue và Transfer ở các trạng thái queue dành cho Inventory Staff, Inventory Approver và Warehouse Keeper. Khởi động lại ứng dụng không tạo thêm bản ghi demo.
+
 ## Chạy bằng Maven Wrapper
 
 Khởi động PostgreSQL và cung cấp các biến môi trường nếu khác giá trị local mặc định:

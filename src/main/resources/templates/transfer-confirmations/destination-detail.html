@@ -28,14 +28,14 @@
     <dl class="detail-grid">
         <div><dt>Mã phiếu đề nghị</dt><dd th:text="${transfer.request.requestCode}">TRF_20260917_001</dd></div>
         <div><dt>Trạng thái điều chuyển</dt><dd><span class="status-pill" th:text="${transfer.status.displayName}">Đang vận chuyển</span></dd></div>
-        <div><dt>Loại phiếu</dt><dd th:text="${transfer.request.operationType.code + '' - '' + transfer.request.operationType.name}">Điều chuyển</dd></div>
-        <div><dt>Người đề nghị</dt><dd th:text="${transfer.request.createdBy.username + '' - '' + transfer.request.createdBy.fullName}">User</dd></div>
-        <div><dt>Kho nguồn</dt><dd th:text="${transfer.sourceWarehouse.warehouseCode + '' - '' + transfer.sourceWarehouse.warehouseName}">Kho nguồn</dd></div>
-        <div><dt>Kho nhận</dt><dd th:text="${transfer.destinationWarehouse.warehouseCode + '' - '' + transfer.destinationWarehouse.warehouseName}">Kho nhận</dd></div>
+        <div><dt>Loại phiếu</dt><dd th:text="${transfer.request.operationType.code + ' - ' + transfer.request.operationType.name}">Điều chuyển</dd></div>
+        <div><dt>Người đề nghị</dt><dd th:text="${transfer.request.createdBy.username + ' - ' + transfer.request.createdBy.fullName}">User</dd></div>
+        <div><dt>Kho nguồn</dt><dd th:text="${transfer.sourceWarehouse.warehouseCode + ' - ' + transfer.sourceWarehouse.warehouseName}">Kho nguồn</dd></div>
+        <div><dt>Kho nhận</dt><dd th:text="${transfer.destinationWarehouse.warehouseCode + ' - ' + transfer.destinationWarehouse.warehouseName}">Kho nhận</dd></div>
         <div><dt>Thời điểm xuất nguồn</dt><dd th:text="${@businessDisplay.dateTime(transfer.sourceConfirmedAt)}">17/09/2026</dd></div>
-        <div><dt>Người xác nhận nguồn</dt><dd th:text="${transfer.sourceConfirmedBy.username + '' - '' + transfer.sourceConfirmedBy.fullName}">Thủ kho</dd></div>
+        <div><dt>Người xác nhận nguồn</dt><dd th:text="${transfer.sourceConfirmedBy.username + ' - ' + transfer.sourceConfirmedBy.fullName}">Thủ kho</dd></div>
         <div th:if="${transfer.destinationConfirmedAt != null}"><dt>Thời điểm nhập đích</dt><dd th:text="${@businessDisplay.dateTime(transfer.destinationConfirmedAt)}">17/09/2026</dd></div>
-        <div th:if="${transfer.destinationConfirmedBy != null}"><dt>Người xác nhận đích</dt><dd th:text="${transfer.destinationConfirmedBy.username + '' - '' + transfer.destinationConfirmedBy.fullName}">Thủ kho</dd></div>
+        <div th:if="${transfer.destinationConfirmedBy != null}"><dt>Người xác nhận đích</dt><dd th:text="${transfer.destinationConfirmedBy.username + ' - ' + transfer.destinationConfirmedBy.fullName}">Thủ kho</dd></div>
     </dl>
 
     <div class="table-wrap">
@@ -43,7 +43,7 @@
             <thead><tr><th>Vật tư</th><th>ĐVT</th><th>Tình trạng</th><th>Số lượng nhận</th><th>Các lớp giá/provenance nguồn</th></tr></thead>
             <tbody>
             <tr th:each="detail : ${transfer.details}">
-                <td th:text="${detail.requestDetail.material.materialCode + '' - '' + detail.requestDetail.material.materialName}">Vật tư</td>
+                <td th:text="${detail.requestDetail.material.materialCode + ' - ' + detail.requestDetail.material.materialName}">Vật tư</td>
                 <td th:text="${detail.requestDetail.material.unit.displayName}">ĐVT</td>
                 <td th:text="${detail.requestDetail.condition.displayName}">Tình trạng</td>
                 <td th:text="${detail.requestDetail.quantity}">1</td>

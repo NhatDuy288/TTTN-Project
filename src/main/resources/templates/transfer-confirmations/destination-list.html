@@ -39,9 +39,9 @@
             <tr th:each="transfer, row : ${pageData.content}">
                 <td th:text="${pageData.number * pageData.size + row.count}">1</td>
                 <td th:text="${transfer.request.requestCode}">TRF_20260917_001</td>
-                <td th:text="${transfer.sourceWarehouse.warehouseCode + '' - '' + transfer.sourceWarehouse.warehouseName}">Kho nguồn</td>
-                <td th:text="${transfer.destinationWarehouse.warehouseCode + '' - '' + transfer.destinationWarehouse.warehouseName}">Kho nhận</td>
-                <td th:text="${transfer.sourceConfirmedBy.username + '' - '' + transfer.sourceConfirmedBy.fullName}">Thủ kho</td>
+                <td th:text="${transfer.sourceWarehouse.warehouseCode + ' - ' + transfer.sourceWarehouse.warehouseName}">Kho nguồn</td>
+                <td th:text="${transfer.destinationWarehouse.warehouseCode + ' - ' + transfer.destinationWarehouse.warehouseName}">Kho nhận</td>
+                <td th:text="${transfer.sourceConfirmedBy.username + ' - ' + transfer.sourceConfirmedBy.fullName}">Thủ kho</td>
                 <td th:text="${@businessDisplay.dateTime(transfer.sourceConfirmedAt)}">17/09/2026</td>
                 <td><span class="status-pill" th:text="${transfer.status.displayName}">Đang vận chuyển</span></td>
                 <td><a th:href="@{/transfer-confirmations/destination/{id}(id=${transfer.id})}">Kiểm tra và xác nhận</a></td>
