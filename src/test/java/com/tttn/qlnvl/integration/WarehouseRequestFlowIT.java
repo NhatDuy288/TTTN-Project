@@ -3,6 +3,7 @@ package com.tttn.qlnvl.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -87,6 +88,29 @@ class WarehouseRequestFlowIT {
     @Autowired private TransferConfirmationService transferConfirmations;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MockMvc mvc;
+
+    @Test
+    void requesterCanOpenUnfilteredOwnRequestListOnPostgreSql() throws Exception {
+        AppUser owner = users.saveAndFlush(new AppUser(
+                "it_list_owner", "unused", "List Owner", Role.REQUESTER));
+        AppUser other = users.saveAndFlush(new AppUser(
+                "it_list_other", "unused", "List Other", Role.REQUESTER));
+        Warehouse destination = warehouses.saveAndFlush(new Warehouse(
+                "KHO_IT_05", "IT Warehouse Five", "Integration test warehouse address", null, owner));
+        Long operationId = jdbc.queryForObject(
+                "select id from operation_type where code = 'IMP_OTHER'", Long.class);
+        Long reasonId = jdbc.queryForObject(
+                "select id from reason where code = 'IMPORT_RETURN'", Long.class);
+        WarehouseRequest ownedRequest = requestService.createDraft(new WarehouseRequestDraftCommand(
+                operationId, reasonId, null, destination.getId(), null, null, List.of()), owner.getId());
+        WarehouseRequest otherRequest = requestService.createDraft(new WarehouseRequestDraftCommand(
+                operationId, reasonId, null, destination.getId(), null, null, List.of()), other.getId());
+
+        mvc.perform(get("/requests").with(user(AppUserPrincipal.from(owner))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(ownedRequest.getRequestCode())))
+                .andExpect(content().string(not(containsString(otherRequest.getRequestCode()))));
+    }
 
     @Test
     void importExportAndTransferPreserveStockAndAuditAcrossModules() throws Exception {

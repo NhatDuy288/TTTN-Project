@@ -15,16 +15,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface WarehouseRequestRepository extends JpaRepository<WarehouseRequest, Long> {
     @EntityGraph(attributePaths = {"createdBy", "operationType", "sourceWarehouse", "destinationWarehouse"})
-    @Query("""
-            select r from WarehouseRequest r
-            where r.createdBy.id = :actorId
-              and (:keyword is null or lower(r.requestCode) like lower(concat('%', :keyword, '%')))
-              and (:status is null or r.status = :status)
-            """)
-    Page<WarehouseRequest> searchOwned(@Param("actorId") Long actorId,
-            @Param("keyword") String keyword,
-            @Param("status") WarehouseRequestStatus status,
-            Pageable pageable);
+    Page<WarehouseRequest> findByCreatedById(Long actorId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"createdBy", "operationType", "sourceWarehouse", "destinationWarehouse"})
+    Page<WarehouseRequest> findByCreatedByIdAndStatus(Long actorId,
+            WarehouseRequestStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"createdBy", "operationType", "sourceWarehouse", "destinationWarehouse"})
+    Page<WarehouseRequest> findByCreatedByIdAndRequestCodeContainingIgnoreCase(Long actorId,
+            String keyword, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"createdBy", "operationType", "sourceWarehouse", "destinationWarehouse"})
+    Page<WarehouseRequest> findByCreatedByIdAndRequestCodeContainingIgnoreCaseAndStatus(
+            Long actorId, String keyword, WarehouseRequestStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"createdBy", "operationType", "sourceWarehouse", "destinationWarehouse"})
     @Query("select r from WarehouseRequest r where r.status = :status")

@@ -45,6 +45,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,9 +95,20 @@ public class WarehouseRequestService {
         int safePage = Math.max(page, 0);
         int safeSize = ALLOWED_PAGE_SIZES.contains(size) ? size : 20;
         String normalizedKeyword = normalize(keyword);
-        return requestRepository.searchOwned(actorId, normalizedKeyword, status,
-                PageRequest.of(safePage, safeSize,
-                        Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))));
+        Pageable pageable = PageRequest.of(safePage, safeSize,
+                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id")));
+        if (normalizedKeyword == null && status == null) {
+            return requestRepository.findByCreatedById(actorId, pageable);
+        }
+        if (normalizedKeyword == null) {
+            return requestRepository.findByCreatedByIdAndStatus(actorId, status, pageable);
+        }
+        if (status == null) {
+            return requestRepository.findByCreatedByIdAndRequestCodeContainingIgnoreCase(
+                    actorId, normalizedKeyword, pageable);
+        }
+        return requestRepository.findByCreatedByIdAndRequestCodeContainingIgnoreCaseAndStatus(
+                actorId, normalizedKeyword, status, pageable);
     }
 
     @Transactional(readOnly = true)

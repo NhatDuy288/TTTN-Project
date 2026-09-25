@@ -85,19 +85,31 @@ class WarehouseRequestServiceTest {
 
     @Test
     void searchesOnlyOwnedRequestsWithSafePagingAndRecentActivitySort() {
-        when(requestRepository.searchOwned(eq(99L), eq("OUT"),
+        when(requestRepository.findByCreatedByIdAndRequestCodeContainingIgnoreCaseAndStatus(
+                eq(99L), eq("OUT"),
                 eq(WarehouseRequestStatus.SUBMITTED), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
         service.searchOwned(99L, "  OUT  ", WarehouseRequestStatus.SUBMITTED, -2, 999);
 
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-        verify(requestRepository).searchOwned(eq(99L), eq("OUT"),
+        verify(requestRepository).findByCreatedByIdAndRequestCodeContainingIgnoreCaseAndStatus(
+                eq(99L), eq("OUT"),
                 eq(WarehouseRequestStatus.SUBMITTED), pageable.capture());
         assertThat(pageable.getValue().getPageNumber()).isZero();
         assertThat(pageable.getValue().getPageSize()).isEqualTo(20);
         assertThat(pageable.getValue().getSort().getOrderFor("updatedAt").isDescending()).isTrue();
         assertThat(pageable.getValue().getSort().getOrderFor("id").isDescending()).isTrue();
+    }
+
+    @Test
+    void searchesOwnedRequestsWithoutOptionalFilters() {
+        when(requestRepository.findByCreatedById(eq(99L), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        service.searchOwned(99L, "   ", null, 0, 20);
+
+        verify(requestRepository).findByCreatedById(eq(99L), any(Pageable.class));
     }
 
     @Test
