@@ -80,7 +80,7 @@ Sau khi khởi động Docker Compose với profile `demo`, chạy smoke test ch
 .\scripts\smoke-auth-workflow.ps1
 ```
 
-Script lấy `DEMO_USER_PASSWORD` từ biến môi trường hoặc `.env`, kiểm tra dashboard, danh sách vật tư, quyền duyệt đề nghị, quyền báo cáo và quyền xem history. Có thể truyền `-BaseUrl` nếu app chạy ở địa chỉ khác. Docker build context chỉ bao gồm `pom.xml` và `src`; app container chạy bằng UID 10001.
+Script lấy `DEMO_USER_PASSWORD` từ biến môi trường hoặc `.env`, đăng nhập đủ năm role rồi kiểm tra ma trận `20 endpoint x 5 role` cho các trang chính: dashboard, master data, PO, Request/approval, transaction/transfer queues và báo cáo. Mỗi ô xác minh `200` hoặc `403` theo RBAC; `/requests` được gọi không có filter. Script cũng giữ kiểm tra quyền truy cập Status History (`403`/`404`). Có thể truyền `-BaseUrl` nếu app chạy ở địa chỉ khác. Docker build context chỉ bao gồm `pom.xml` và `src`; app container chạy bằng UID 10001.
 
 Integration test dùng Testcontainers và PostgreSQL 16 tạm, chạy riêng khi Docker Desktop đang hoạt động. Test tạo dữ liệu trong database tạm, kiểm tra Request DRAFT/SUBMITTED cancellation, luồng nhập → xuất → điều chuyển, tồn vật lý và StatusHistory; không sửa database của Compose:
 
