@@ -7,10 +7,21 @@
     <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
 </head>
 <body class="auth-page">
-<main class="auth-card" aria-labelledby="login-title">
-    <p class="eyebrow">TTTN QL NVL</p>
-    <h1 id="login-title">Đăng nhập hệ thống</h1>
-    <p class="muted">Sử dụng tài khoản nghiệp vụ đã được cấp.</p>
+<div class="auth-layout">
+    <section class="auth-visual" aria-label="Giới thiệu hệ thống">
+        <div class="auth-visual-copy">
+            <p class="eyebrow">Digital Warehouse Platform</p>
+            <h2>Vận hành kho<br>rõ ràng, liền mạch</h2>
+            <p>Theo dõi nguyên vật liệu thẻ xuyên suốt từ đề nghị, phê duyệt đến nhập xuất và báo cáo.</p>
+        </div>
+        <img src="/images/warehouse-illustration.svg" alt="Minh họa quản lý kho nguyên vật liệu">
+    </section>
+
+    <main class="auth-card" aria-labelledby="login-title">
+        <p class="eyebrow">Đăng nhập an toàn</p>
+        <p class="auth-product-name">Hệ thống quản lý nguyên vật liệu thẻ</p>
+        <h1 id="login-title">Chào mừng trở lại</h1>
+        <p class="muted">Vui lòng sử dụng tài khoản nghiệp vụ đã được cấp.</p>
 
     <div class="alert alert-error" role="alert" th:if="${param.error}">
         Tên đăng nhập hoặc mật khẩu không đúng.
@@ -22,15 +33,20 @@
         Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.
     </div>
 
-    <form method="post" th:action="@{/login}" class="stack">
-        <label for="username">Tên đăng nhập</label>
-        <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+        <form method="post" th:action="@{/login}" class="stack">
+            <label for="username">Tên đăng nhập</label>
+            <div class="input-with-icon input-user">
+                <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+            </div>
 
-        <label for="password">Mật khẩu</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <label for="password">Mật khẩu</label>
+            <div class="input-with-icon input-lock">
+                <input id="password" name="password" type="password" autocomplete="current-password" required>
+            </div>
 
-        <button type="submit">Đăng nhập</button>
-    </form>
-</main>
+            <button type="submit">Đăng nhập</button>
+        </form>
+    </main>
+</div>
 </body>
 </html>

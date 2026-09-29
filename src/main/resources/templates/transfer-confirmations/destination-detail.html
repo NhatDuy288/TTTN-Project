@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${transfer.request.requestCode + '' | Xác nhận nhập điều chuyển''}">Xác nhận nhập điều chuyển</title>
+    <title th:text="${transfer.request.requestCode + ' | Xác nhận nhập điều chuyển'}">Xác nhận nhập điều chuyển</title>
     <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
 </head>
 <body>
@@ -50,7 +50,7 @@
                 <td>
                     <ul class="allocation-list">
                         <li th:each="allocation : ${detail.allocations}"
-                            th:text="${''Lô nguồn #'' + allocation.inventoryLot.id + '' · SL '' + allocation.allocatedQuantity + '' · Đơn giá '' + (allocation.allocatedUnitPrice == null ? ''-'' : allocation.allocatedUnitPrice)}">Lô nguồn</li>
+                            th:text="${'Lô nguồn #' + allocation.inventoryLot.id + ' · SL ' + allocation.allocatedQuantity + ' · Đơn giá ' + (allocation.allocatedUnitPrice == null ? '-' : allocation.allocatedUnitPrice)}">Lô nguồn</li>
                     </ul>
                 </td>
             </tr>
@@ -59,14 +59,14 @@
     </div>
 
     <form class="form-card transaction-submit-card" method="post"
-          th:if="${transfer.status.name() == ''IN_TRANSIT''}"
+          th:if="${transfer.status.name() == 'IN_TRANSIT'}"
           th:action="@{/transfer-confirmations/destination/{id}/confirm(id=${transfer.id})}">
         <h2>Xác nhận nhập kho đích</h2>
         <p class="form-hint">Thao tác sẽ tạo lot mới tại kho nhận theo từng allocation và lớp giá nguồn, sau đó hoàn tất điều chuyển và phiếu đề nghị. Không hỗ trợ nhận một phần.</p>
         <div class="form-actions"><button type="submit">Xác nhận đã nhập kho đích</button></div>
     </form>
 
-    <section class="form-card transaction-submit-card" th:unless="${transfer.status.name() == ''IN_TRANSIT''}">
+    <section class="form-card transaction-submit-card" th:unless="${transfer.status.name() == 'IN_TRANSIT'}">
         <h2>Trạng thái xử lý đích</h2>
         <p class="readonly-value" th:text="${transfer.status.displayName}">Hoàn tất</p>
     </section>

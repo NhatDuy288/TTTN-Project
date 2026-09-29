@@ -8,19 +8,24 @@
 </head>
 <body>
 <header class="topbar">
-    <div>
-        <p class="eyebrow">Quản lý kho vật tư</p>
-        <strong th:text="${displayName}">Người dùng</strong>
-        <span class="role" th:text="${role}">ROLE</span>
+    <a class="brand-link" th:href="@{/dashboard}">Quản lý nguyên vật liệu thẻ</a>
+    <div class="topbar-actions">
+        <div class="topbar-profile">
+            <strong th:text="${displayName}">Người dùng</strong>
+            <span class="role" th:text="${role}">ROLE</span>
+        </div>
+        <form method="post" th:action="@{/logout}">
+            <button class="button-secondary" type="submit">Đăng xuất</button>
+        </form>
     </div>
-    <form method="post" th:action="@{/logout}">
-        <button class="button-secondary" type="submit">Đăng xuất</button>
-    </form>
 </header>
 
 <main class="page-shell">
-    <h1>Tổng quan</h1>
-    <p class="muted">Các chức năng được hiển thị theo vai trò hiện tại.</p>
+    <div class="dashboard-intro">
+        <p class="eyebrow">Màn hình chính</p>
+        <h1>Tổng quan</h1>
+        <p class="muted">Chọn chức năng nghiệp vụ phù hợp với vai trò hiện tại.</p>
+    </div>
 
     <section class="shortcut-grid" aria-label="Chức năng theo vai trò">
         <a class="shortcut" th:each="shortcut : ${shortcuts}"

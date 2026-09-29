@@ -96,6 +96,9 @@ class DemoWorkflowProvisionerIT extends PostgreSqlIntegrationTestBase {
         assertPage("/transaction-confirmations", keeper);
         assertPage("/transfer-confirmations/source", keeper);
         assertPage("/transfer-confirmations/destination", keeper);
+        long destinationTransferId = transferConfirmations.destinationQueue(0, 20)
+                .getContent().getFirst().getId();
+        assertPage("/transfer-confirmations/destination/" + destinationTransferId, keeper);
     }
 
     private void assertPage(String path, AppUser actor) throws Exception {
