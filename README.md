@@ -90,4 +90,14 @@ Integration test dùng Testcontainers và PostgreSQL 16 tạm, chạy riêng khi
 .\mvnw.cmd "-Dtest=WarehouseRequestFlowIT" test
 ```
 
+## Continuous Integration
+
+GitHub Actions chạy tự động khi push hoặc mở pull request vào `main`, và cũng có thể chạy thủ công bằng `workflow_dispatch`. Workflow dùng Java 21, Maven Wrapper và Docker/Testcontainers để thực hiện tuần tự:
+
+1. toàn bộ unit test qua `./mvnw -B -ntp test`;
+2. toàn bộ PostgreSQL integration test qua `./mvnw -B -ntp -Dtest='*IT' test`;
+3. đóng gói JAR qua `./mvnw -B -ntp -DskipTests package`.
+
+Cấu hình nằm tại `.github/workflows/ci.yml`; workflow không deploy và không truy cập database Compose hoặc production.
+
 Ứng dụng dùng session authentication, CSRF và đúng năm role nghiệp vụ. Session hết hạn sau 10 phút không hoạt động.

@@ -31,7 +31,7 @@ class SecurityConfigWebTest {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/login"))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Đăng nhập hệ thống")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Chào mừng trở lại")));
     }
 
     @Test
